@@ -1,9 +1,4 @@
 / /app/index.html 200!
 /app /app/index.html 200!
 /assets/* /assets/:splat 200!
-/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons* /assets/fonts/Ionicons.6148e7019854f3bde85b633cb88f3c25.ttf 200!
-/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons* /assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf 200!
-/assets/node_modules/%40expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons* /assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf 200!
-/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons* /assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf 200!
-/assets/node_modules/%40expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons* /assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf 200!
 
