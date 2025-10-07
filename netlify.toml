@@ -23,14 +23,14 @@
   status = 200
   force = true
 
-# Map any Ionicons font request (with possible query/hash) to the built asset filename
+# Map any Ionicons font request to the correct path
 [[redirects]]
   from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons*"
-  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.6148e7019854f3bde85b633cb88f3c25.ttf"
+  to = "/assets/fonts/Ionicons.6148e7019854f3bde85b633cb88f3c25.ttf"
   status = 200
   force = true
 
-# Map MaterialIcons font requests (with possible query/hash) to our mirrored fonts path
+# Map MaterialIcons font requests to the correct path
 [[redirects]]
   from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons*"
   to = "/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
@@ -43,35 +43,15 @@
   status = 200
   force = true
 
-# Additional patterns for MaterialIcons - more specific
-[[redirects]]
-  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf*"
-  to = "/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
-  status = 200
-  force = true
-
-# Catch any MaterialIcons request with hash/query parameters
-[[redirects]]
-  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf*"
-  to = "/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
-  status = 200
-  force = true
-
 # Map MaterialCommunityIcons font requests as well
 [[redirects]]
   from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons*"
-  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf"
+  to = "/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf"
   status = 200
   force = true
 
 [[redirects]]
   from = "/assets/node_modules/%40expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons*"
-  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons*"
   to = "/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf"
   status = 200
   force = true

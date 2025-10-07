@@ -7,10 +7,14 @@ export default defineConfig({
   plugins: [react(), vue()],
   server: {
     port: 3000,
-    host: true
+    host: true,
+    fs: {
+      allow: ['..']
+    }
   },
   build: {
     outDir: 'dist',
     sourcemap: false
-  }
+  },
+  publicDir: 'public'
 })

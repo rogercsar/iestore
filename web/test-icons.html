@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Ícones</title>
+    
+    <!-- Preload font files -->
+    <link rel="preload" href="/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf" as="font" type="font/ttf" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <style>
+        @font-face { 
+            font-family: 'Material Icons'; 
+            src: url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2') format('woff2'),
+                 url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff') format('woff'),
+                 url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype');
+            font-weight: normal; 
+            font-style: normal; 
+            font-display: swap; 
+        }
+        
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        
+        .icon-test {
+            font-family: 'Material Icons';
+            font-size: 48px;
+            margin: 10px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+        }
+        
+        .status {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Teste de Renderização de Ícones</h1>
+    
+    <div class="test-section">
+        <h2>Ícones Material Icons:</h2>
+        <div class="icon-test">home</div>
+        <div class="icon-test">favorite</div>
+        <div class="icon-test">settings</div>
+        <div class="icon-test">search</div>
+        <div class="icon-test">menu</div>
+        <div class="icon-test">close</div>
+        <div class="icon-test">add</div>
+        <div class="icon-test">remove</div>
+        <div class="icon-test">edit</div>
+        <div class="icon-test">delete</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Teste de Carregamento de Fontes:</h2>
+        <div id="font-status" class="status">Verificando carregamento das fontes...</div>
+        <div id="icon-status" class="status">Verificando renderização dos ícones...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Teste com Classes CSS:</h2>
+        <i class="material-icons">home</i>
+        <i class="material-icons">favorite</i>
+        <i class="material-icons">settings</i>
+        <span class="material-icons">search</span>
+        <div class="material-icons">menu</div>
+    </div>
+    
+    <script>
+        // Teste de carregamento de fontes
+        document.fonts.ready.then(() => {
+            const fontStatus = document.getElementById('font-status');
+            fontStatus.textContent = '✅ Fontes carregadas com sucesso!';
+            fontStatus.className = 'status success';
+            
+            // Teste específico de Material Icons
+            const testElement = document.createElement('div');
+            testElement.style.fontFamily = 'Material Icons';
+            testElement.style.fontSize = '24px';
+            testElement.textContent = 'home';
+            testElement.style.position = 'absolute';
+            testElement.style.left = '-9999px';
+            document.body.appendChild(testElement);
+            
+            const computedStyle = window.getComputedStyle(testElement);
+            const fontFamily = computedStyle.fontFamily;
+            
+            const iconStatus = document.getElementById('icon-status');
+            if (fontFamily.includes('Material Icons')) {
+                iconStatus.textContent = '✅ Material Icons carregado corretamente!';
+                iconStatus.className = 'status success';
+            } else {
+                iconStatus.textContent = '❌ Material Icons não carregado';
+                iconStatus.className = 'status error';
+            }
+            
+            document.body.removeChild(testElement);
+        }).catch((error) => {
+            const fontStatus = document.getElementById('font-status');
+            fontStatus.textContent = '❌ Erro ao carregar fontes: ' + error.message;
+            fontStatus.className = 'status error';
+        });
+        
+        // Teste adicional após delay
+        setTimeout(() => {
+            const icons = document.querySelectorAll('.icon-test');
+            let workingIcons = 0;
+            
+            icons.forEach(icon => {
+                const computedStyle = window.getComputedStyle(icon);
+                const fontFamily = computedStyle.fontFamily;
+                if (fontFamily.includes('Material Icons')) {
+                    workingIcons++;
+                }
+            });
+            
+            console.log(`Ícones funcionando: ${workingIcons}/${icons.length}`);
+        }, 2000);
+    </script>
+</body>
+</html>
+

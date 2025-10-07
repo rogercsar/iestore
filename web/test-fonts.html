@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Fontes</title>
+    <style>
+        @font-face {
+            font-family: 'Material Icons';
+            src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        
+        @font-face {
+            font-family: 'MaterialCommunityIcons';
+            src: url('/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        
+        @font-face {
+            font-family: 'Ionicons';
+            src: url('/assets/fonts/Ionicons.6148e7019854f3bde85b633cb88f3c25.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        
+        body {
+            font-family: 'Material Icons', 'MaterialCommunityIcons', 'Ionicons', system-ui, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-text {
+            font-size: 24px;
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+        }
+        
+        .icon-test {
+            font-family: 'Material Icons';
+            font-size: 48px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Renderização de Fontes</h1>
+    
+    <div class="test-text">
+        <h2>Texto Normal:</h2>
+        <p>Este é um teste de renderização de texto. Se você conseguir ler esta frase completamente, as fontes estão funcionando corretamente.</p>
+        <p>ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+        <p>abcdefghijklmnopqrstuvwxyz</p>
+        <p>0123456789</p>
+    </div>
+    
+    <div class="test-text">
+        <h2>Ícones Material:</h2>
+        <span class="icon-test">home</span>
+        <span class="icon-test">favorite</span>
+        <span class="icon-test">settings</span>
+        <span class="icon-test">search</span>
+    </div>
+    
+    <div class="test-text">
+        <h2>Teste de Carregamento de Fontes:</h2>
+        <p id="font-status">Verificando carregamento das fontes...</p>
+    </div>
+    
+    <script>
+        // Teste se as fontes carregaram
+        document.fonts.ready.then(() => {
+            const status = document.getElementById('font-status');
+            status.textContent = '✅ Fontes carregadas com sucesso!';
+            status.style.color = 'green';
+        }).catch(() => {
+            const status = document.getElementById('font-status');
+            status.textContent = '❌ Erro ao carregar fontes';
+            status.style.color = 'red';
+        });
+        
+        // Teste adicional
+        setTimeout(() => {
+            const testElement = document.createElement('div');
+            testElement.style.fontFamily = 'Material Icons';
+            testElement.style.fontSize = '24px';
+            testElement.textContent = 'home';
+            document.body.appendChild(testElement);
+            
+            const computedStyle = window.getComputedStyle(testElement);
+            console.log('Font family:', computedStyle.fontFamily);
+            console.log('Font size:', computedStyle.fontSize);
+        }, 1000);
+    </script>
+</body>
+</html>
+
