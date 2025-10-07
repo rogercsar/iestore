@@ -61,6 +61,7 @@ export default function App() {
         style.setAttribute('data-iestore-fonts', 'true');
         style.innerHTML = `
 @font-face { font-family: 'Material Icons'; src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { font-family: 'MaterialIcons'; src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Material Design Icons'; src: url('/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
 `;
         document.head.appendChild(style);
