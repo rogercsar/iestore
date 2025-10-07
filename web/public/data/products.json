@@ -1,0 +1,7 @@
+[
+  { "name": "Copo café Stanley", "quantity": 1, "cost": 99, "unitPrice": 99, "photo": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400" },
+  { "name": "Cabo tipo C 2m", "quantity": 10, "cost": 10, "unitPrice": 29 },
+  { "name": "Powerbank 20.000mAh", "quantity": 5, "cost": 80, "unitPrice": 200 }
+]
+
+

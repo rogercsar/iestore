@@ -1,0 +1,20 @@
+[
+  {
+    "dateISO": "2025-10-06T12:00:00.000Z",
+    "product": "Powerbank 20.000mAh",
+    "quantity": 1,
+    "totalValue": 200,
+    "totalCost": 80,
+    "profit": 120,
+    "customerName": "Juliane Campos Silva",
+    "customerPhone": "(65) 99238-3951",
+    "paymentMethod": "À Prazo",
+    "installments": [
+      { "id": "p1-1", "number": 1, "value": 100, "dueDate": "2025-11-06T12:00:00.000Z", "status": "pending" },
+      { "id": "p1-2", "number": 2, "value": 100, "dueDate": "2025-12-06T12:00:00.000Z", "status": "pending" }
+    ],
+    "status": "pending"
+  }
+]
+
+

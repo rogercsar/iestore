@@ -1,0 +1,107 @@
+[build]
+  command = "npm ci && cd web && npm ci && npm run build"
+  publish = "web/dist"
+
+# Serve built assets without SPA rewrite
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = true
+
+# Send root to Expo app index
+[[redirects]]
+  from = "/"
+  to = "/app/index.html"
+  status = 200
+  force = true
+
+# Handle /app without trailing slash
+[[redirects]]
+  from = "/app"
+  to = "/app/index.html"
+  status = 200
+  force = true
+
+# Map any Ionicons font request (with possible query/hash) to the built asset filename
+[[redirects]]
+  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons*"
+  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.6148e7019854f3bde85b633cb88f3c25.ttf"
+  status = 200
+  force = true
+
+# Map MaterialIcons font requests (with possible query/hash) to built asset filename
+[[redirects]]
+  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons*"
+  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/assets/node_modules/%40expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons*"
+  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
+  status = 200
+  force = true
+
+# Fallback to short fonts path we mirror during integration
+[[redirects]]
+  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons*"
+  to = "/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
+  status = 200
+  force = true
+
+# Map MaterialCommunityIcons font requests as well
+[[redirects]]
+  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons*"
+  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/assets/node_modules/%40expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons*"
+  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons*"
+  to = "/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf"
+  status = 200
+  force = true
+
+# Catch-all SPA route last
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/assets/*.ttf"
+  [headers.values]
+    Content-Type = "font/ttf"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/assets/*.woff2"
+  [headers.values]
+    Content-Type = "font/woff2"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/assets/*.woff"
+  [headers.values]
+    Content-Type = "font/woff"
+    Access-Control-Allow-Origin = "*"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[functions]
+  directory = "netlify/functions"
+

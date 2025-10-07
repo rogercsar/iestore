@@ -1,0 +1,32 @@
+[
+  { "name": "Copo café Stanley", "quantity": 1, "cost": 99, "unitPrice": 99, "photo": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400" },
+  { "name": "Garrafas pretas Stanley", "quantity": 2, "cost": 38, "unitPrice": 98 },
+  { "name": "Garrafas Stanley azul", "quantity": 1, "cost": 20, "unitPrice": 49.9 },
+  { "name": "Tomada inteligente", "quantity": 1, "cost": 38, "unitPrice": 108 },
+  { "name": "Capinhas coloridas iPhone", "quantity": 5, "cost": 7, "unitPrice": 27 },
+  { "name": "Capinhas transparentes", "quantity": 4, "cost": 7, "unitPrice": 29 },
+  { "name": "Películas", "quantity": 8, "cost": 3.5, "unitPrice": 19 },
+  { "name": "Microfone Kaidi", "quantity": 1, "cost": 50, "unitPrice": 119 },
+  { "name": "Cabos tipo C", "quantity": 2, "cost": 10, "unitPrice": 35 },
+  { "name": "Fones Bluetooth", "quantity": 4, "cost": 16, "unitPrice": 49.9 },
+  { "name": "Powerbank", "quantity": 1, "cost": 80, "unitPrice": 200 },
+  { "name": "Relógio digital Aziki", "quantity": 1, "cost": 80, "unitPrice": 189 },
+  { "name": "Game box", "quantity": 1, "cost": 30, "unitPrice": 80 },
+  { "name": "Fone Bluetooth Kaidi", "quantity": 1, "cost": 60, "unitPrice": 179 },
+  { "name": "Mouse", "quantity": 1, "cost": 25, "unitPrice": 49.9 },
+  { "name": "Carregadores micro Inova", "quantity": 1, "cost": 10, "unitPrice": 49 },
+  { "name": "Carregador micro Kaidi", "quantity": 1, "cost": 15, "unitPrice": 79 },
+  { "name": "Carregadores tipo c", "quantity": 2, "cost": 20, "unitPrice": 79 },
+  { "name": "Powerbank com cabo", "quantity": 1, "cost": 70, "unitPrice": 185 },
+  { "name": "Fone com cabo", "quantity": 1, "cost": 5, "unitPrice": 10 },
+  { "name": "Cabos USB tipo c", "quantity": 1, "cost": 10, "unitPrice": 29 },
+  { "name": "Cabo tipo c inova 2m", "quantity": 1, "cost": 15, "unitPrice": 39 },
+  { "name": "Pulseira avulsa Relógio", "quantity": 1, "cost": 10, "unitPrice": 29 },
+  { "name": "Combo 5+1 pelicula", "quantity": 1, "cost": 10.5, "unitPrice": 99 }
+]
+
+
+
+
+
+
