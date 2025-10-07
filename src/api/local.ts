@@ -4,6 +4,29 @@ import { Product, Sale, SaleItem, MultiSale, DashboardSummary } from '@types';
 const KEY_PRODUCTS = 'iestore_products_v1';
 const KEY_SALES = 'iestore_sales_v1';
 
+// Helper function to make safe requests to Netlify functions
+async function safeNetlifyRequest(url: string, options?: RequestInit): Promise<boolean> {
+  try {
+    // Only attempt if we're on the deployed domain
+    if (typeof window !== 'undefined' && !window.location.hostname.includes('netlify.app')) {
+      return false;
+    }
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.headers ?? {})
+      }
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.warn('Netlify function request failed:', error);
+    return false;
+  }
+}
+
 function parseBRNumber(input: string | number): number {
   if (typeof input === 'number') return input;
   const trimmed = input.trim().replace(/\s+/g, '');
@@ -66,29 +89,48 @@ export const LocalData = {
 
   async syncFromSheets(): Promise<void> {
     try {
+      // Only attempt sync if we're on the deployed domain
+      if (typeof window !== 'undefined' && !window.location.hostname.includes('netlify.app')) {
+        return;
+      }
+
       // Pull products
-      const prodRes = await fetch('/.netlify/functions/sheets?table=products');
-      if (prodRes.ok) {
-        const products = await prodRes.json();
-        if (Array.isArray(products)) {
-          await AsyncStorage.setItem(KEY_PRODUCTS, JSON.stringify(products));
+      try {
+        const prodRes = await fetch('/.netlify/functions/sheets?table=products');
+        if (prodRes.ok) {
+          const products = await prodRes.json();
+          if (Array.isArray(products) && products.length > 0) {
+            await AsyncStorage.setItem(KEY_PRODUCTS, JSON.stringify(products));
+          }
         }
+      } catch (error) {
+        console.warn('Failed to sync products from sheets:', error);
       }
+
       // Pull customers
-      const custRes = await fetch('/.netlify/functions/sheets?table=customers');
-      if (custRes.ok) {
-        const customers = await custRes.json();
-        if (Array.isArray(customers)) {
-          await AsyncStorage.setItem('customers', JSON.stringify(customers));
+      try {
+        const custRes = await fetch('/.netlify/functions/sheets?table=customers');
+        if (custRes.ok) {
+          const customers = await custRes.json();
+          if (Array.isArray(customers) && customers.length > 0) {
+            await AsyncStorage.setItem('customers', JSON.stringify(customers));
+          }
         }
+      } catch (error) {
+        console.warn('Failed to sync customers from sheets:', error);
       }
+
       // Pull sales
-      const salesRes = await fetch('/.netlify/functions/sheets?table=sales');
-      if (salesRes.ok) {
-        const sales = await salesRes.json();
-        if (Array.isArray(sales)) {
-          await AsyncStorage.setItem(KEY_SALES, JSON.stringify(sales));
+      try {
+        const salesRes = await fetch('/.netlify/functions/sheets?table=sales');
+        if (salesRes.ok) {
+          const sales = await salesRes.json();
+          if (Array.isArray(sales) && sales.length > 0) {
+            await AsyncStorage.setItem(KEY_SALES, JSON.stringify(sales));
+          }
         }
+      } catch (error) {
+        console.warn('Failed to sync sales from sheets:', error);
       }
     } catch (e) {
       console.warn('syncFromSheets failed:', e);
@@ -248,9 +290,8 @@ export const LocalData = {
         unitPrice: p.unitPrice,
         photo: p.photo || ''
       }));
-      await fetch('/.netlify/functions/sheets?table=products', {
+      await safeNetlifyRequest('/.netlify/functions/sheets?table=products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'overwrite', rows })
       });
     } catch {}
@@ -438,9 +479,8 @@ export const LocalData = {
     await AsyncStorage.setItem(KEY_SALES, JSON.stringify(sales));
     // Best-effort push to Google Sheets
     try {
-      await fetch('/.netlify/functions/sheets?table=sales', {
+      await safeNetlifyRequest('/.netlify/functions/sheets?table=sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'append',
           rows: [
@@ -470,11 +510,10 @@ export const LocalData = {
           status: inst.status,
           paidDate: inst.paidDate || ''
         }));
-        await fetch('/.netlify/functions/sheets?table=installments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'append', rows: instRows })
-        });
+await safeNetlifyRequest('/.netlify/functions/sheets?table=installments', {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'append', rows: instRows })
+      });
       }
     } catch {}
     
@@ -529,9 +568,8 @@ export const LocalData = {
         unitPrice: p.unitPrice,
         photo: p.photo || ''
       }));
-      await fetch('/.netlify/functions/sheets?table=products', {
+      await safeNetlifyRequest('/.netlify/functions/sheets?table=products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'overwrite', rows })
       });
     } catch {}
@@ -559,9 +597,8 @@ export const LocalData = {
     await AsyncStorage.setItem(KEY_SALES, JSON.stringify(sales));
     // Best-effort push to Google Sheets
     try {
-      await fetch('/.netlify/functions/sheets?table=sales', {
+      await safeNetlifyRequest('/.netlify/functions/sheets?table=sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'append',
           rows: [
@@ -735,11 +772,10 @@ export const LocalData = {
           lastPurchase: c.lastPurchase || '',
           notes: c.notes || ''
         }));
-        await fetch('/.netlify/functions/sheets?table=customers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'overwrite', rows })
-        });
+await safeNetlifyRequest('/.netlify/functions/sheets?table=customers', {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'overwrite', rows })
+      });
       } catch {}
     } catch (e) {
       console.error('Failed to save customer:', e);
@@ -765,11 +801,10 @@ export const LocalData = {
           lastPurchase: c.lastPurchase || '',
           notes: c.notes || ''
         }));
-        await fetch('/.netlify/functions/sheets?table=customers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'overwrite', rows })
-        });
+await safeNetlifyRequest('/.netlify/functions/sheets?table=customers', {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'overwrite', rows })
+      });
       } catch {}
     } catch (e) {
       console.error('Failed to delete customer:', e);

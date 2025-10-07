@@ -100,8 +100,42 @@ export default function App() {
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }
+/* Force icon rendering for React Native Web */
+[class*="MaterialIcons"] {
+  font-family: 'Material Icons', 'MaterialIcons' !important;
+}
+/* Override Expo's font loading */
+@font-face { 
+  font-family: 'MaterialIcons'; 
+  src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype') !important; 
+  font-weight: normal !important; 
+  font-style: normal !important; 
+  font-display: swap !important; 
+}
 `;
         document.head.appendChild(style);
+
+        // Intercept font loading requests and redirect them
+        const originalFetch = window.fetch;
+        window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+          const url = typeof input === 'string' ? input : input.toString();
+          
+          // Redirect MaterialIcons font requests to our mirrored path
+          if (url.includes('MaterialIcons') && url.includes('.ttf')) {
+            const redirectedUrl = '/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf';
+            console.log('Redirecting font request from', url, 'to', redirectedUrl);
+            return originalFetch(redirectedUrl, init);
+          }
+          
+          // Redirect MaterialCommunityIcons font requests
+          if (url.includes('MaterialCommunityIcons') && url.includes('.ttf')) {
+            const redirectedUrl = '/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf';
+            console.log('Redirecting font request from', url, 'to', redirectedUrl);
+            return originalFetch(redirectedUrl, init);
+          }
+          
+          return originalFetch(input, init);
+        };
       } catch {}
     }
     // migrate existing sales data
@@ -114,18 +148,16 @@ export default function App() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (typeof window !== 'undefined') {
-        // On web, we inject @font-face in the other effect and skip expo-font network fetches
-        if (navigator.userAgent && /Mozilla|Chrome|Safari|Edge/.test(navigator.userAgent)) {
-          if (mounted) setFontsReady(true);
-          return;
-        }
-      }
       try {
+        // Always try to load MaterialIcons font
         await Font.loadAsync(MaterialIcons.font);
         if (mounted) setFontsReady(true);
       } catch (e) {
-        try { await (MaterialIcons.loadFont?.() as unknown as Promise<void>); } catch {}
+        console.warn('Font loading failed, continuing anyway:', e);
+        // Try alternative loading methods
+        try { 
+          await (MaterialIcons.loadFont?.() as unknown as Promise<void>); 
+        } catch {}
         if (mounted) setFontsReady(true);
       }
     })();

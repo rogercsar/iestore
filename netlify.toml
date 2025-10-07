@@ -30,22 +30,22 @@
   status = 200
   force = true
 
-# Map MaterialIcons font requests (with possible query/hash) to built asset filename
+# Map MaterialIcons font requests (with possible query/hash) to our mirrored fonts path
 [[redirects]]
   from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons*"
-  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
+  to = "/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
   status = 200
   force = true
 
 [[redirects]]
   from = "/assets/node_modules/%40expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons*"
-  to = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
+  to = "/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
   status = 200
   force = true
 
-# Fallback to short fonts path we mirror during integration
+# Additional patterns for MaterialIcons
 [[redirects]]
-  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons*"
+  from = "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf*"
   to = "/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf"
   status = 200
   force = true
