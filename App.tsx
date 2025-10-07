@@ -136,6 +136,28 @@ export default function App() {
           
           return originalFetch(input, init);
         };
+
+        // Also intercept XMLHttpRequest for older font loading methods
+        const originalXHR = window.XMLHttpRequest;
+        window.XMLHttpRequest = function() {
+          const xhr = new originalXHR();
+          const originalOpen = xhr.open;
+          xhr.open = function(method: string, url: string | URL, ...args: any[]) {
+            const urlStr = url.toString();
+            if (urlStr.includes('MaterialIcons') && urlStr.includes('.ttf')) {
+              const redirectedUrl = '/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf';
+              console.log('XHR Redirecting font request from', urlStr, 'to', redirectedUrl);
+              return originalOpen.call(this, method, redirectedUrl, ...args);
+            }
+            if (urlStr.includes('MaterialCommunityIcons') && urlStr.includes('.ttf')) {
+              const redirectedUrl = '/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf';
+              console.log('XHR Redirecting font request from', urlStr, 'to', redirectedUrl);
+              return originalOpen.call(this, method, redirectedUrl, ...args);
+            }
+            return originalOpen.call(this, method, url, ...args);
+          };
+          return xhr;
+        };
       } catch {}
     }
     // migrate existing sales data
@@ -149,7 +171,13 @@ export default function App() {
     let mounted = true;
     (async () => {
       try {
-        // Always try to load MaterialIcons font
+        // On web, skip expo-font loading and rely on our CSS injection
+        if (Platform.OS === 'web') {
+          if (mounted) setFontsReady(true);
+          return;
+        }
+        
+        // Always try to load MaterialIcons font for native platforms
         await Font.loadAsync(MaterialIcons.font);
         if (mounted) setFontsReady(true);
       } catch (e) {
