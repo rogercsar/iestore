@@ -86,18 +86,30 @@
   [headers.values]
     Content-Type = "font/ttf"
     Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
 
 [[headers]]
   for = "/assets/*.woff2"
   [headers.values]
     Content-Type = "font/woff2"
     Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
 
 [[headers]]
   for = "/assets/*.woff"
   [headers.values]
     Content-Type = "font/woff"
     Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Content-Type = "text/html; charset=utf-8"
+    Cache-Control = "no-cache, no-store, must-revalidate"
 
 [build.environment]
   NODE_VERSION = "18"

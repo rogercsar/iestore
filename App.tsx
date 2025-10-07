@@ -57,12 +57,49 @@ export default function App() {
     // Inject web font-face fallbacks for Material icons to avoid 404 from @expo path
     if (Platform.OS === 'web') {
       try {
+        // Remove any existing font styles
+        const existingStyles = document.querySelectorAll('[data-iestore-fonts]');
+        existingStyles.forEach(style => style.remove());
+        
         const style = document.createElement('style');
         style.setAttribute('data-iestore-fonts', 'true');
         style.innerHTML = `
-@font-face { font-family: 'Material Icons'; src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
-@font-face { font-family: 'MaterialIcons'; src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
-@font-face { font-family: 'Material Design Icons'; src: url('/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf') format('truetype'); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { 
+  font-family: 'Material Icons'; 
+  src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype'); 
+  font-weight: normal; 
+  font-style: normal; 
+  font-display: swap; 
+}
+@font-face { 
+  font-family: 'MaterialIcons'; 
+  src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype'); 
+  font-weight: normal; 
+  font-style: normal; 
+  font-display: swap; 
+}
+@font-face { 
+  font-family: 'Material Design Icons'; 
+  src: url('/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf') format('truetype'); 
+  font-weight: normal; 
+  font-style: normal; 
+  font-display: swap; 
+}
+.material-icons {
+  font-family: 'Material Icons', 'MaterialIcons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
 `;
         document.head.appendChild(style);
       } catch {}
