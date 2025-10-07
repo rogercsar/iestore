@@ -7,6 +7,27 @@
     <title>web</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Icons:wght@400&display=swap" rel="stylesheet">
+    <style>
+      /* Force MaterialIcons to use our local font files */
+      @font-face { 
+        font-family: 'Material Icons'; 
+        src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype'); 
+        font-weight: normal; 
+        font-style: normal; 
+        font-display: swap; 
+      }
+      @font-face { 
+        font-family: 'MaterialIcons'; 
+        src: url('/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf') format('truetype'); 
+        font-weight: normal; 
+        font-style: normal; 
+        font-display: swap; 
+      }
+      /* Override all MaterialIcons references */
+      [class*="MaterialIcons"], .material-icons {
+        font-family: 'Material Icons', 'MaterialIcons' !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

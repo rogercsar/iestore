@@ -112,52 +112,68 @@ export default function App() {
   font-style: normal !important; 
   font-display: swap !important; 
 }
+/* Override all possible MaterialIcons font family references */
+* {
+  font-family: 'Material Icons', 'MaterialIcons', sans-serif !important;
+}
 `;
         document.head.appendChild(style);
 
-        // Intercept font loading requests and redirect them
-        const originalFetch = window.fetch;
-        window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
-          const url = typeof input === 'string' ? input : input.toString();
-          
-          // Redirect MaterialIcons font requests to our mirrored path
-          if (url.includes('MaterialIcons') && url.includes('.ttf')) {
-            const redirectedUrl = '/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf';
-            console.log('Redirecting font request from', url, 'to', redirectedUrl);
-            return originalFetch(redirectedUrl, init);
-          }
-          
-          // Redirect MaterialCommunityIcons font requests
-          if (url.includes('MaterialCommunityIcons') && url.includes('.ttf')) {
-            const redirectedUrl = '/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf';
-            console.log('Redirecting font request from', url, 'to', redirectedUrl);
-            return originalFetch(redirectedUrl, init);
-          }
-          
-          return originalFetch(input, init);
+        // More aggressive font loading interception
+        const setupFontInterception = () => {
+          // Intercept fetch requests
+          const originalFetch = window.fetch;
+          window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+            const url = typeof input === 'string' ? input : input.toString();
+            
+            if (url.includes('MaterialIcons') && url.includes('.ttf')) {
+              const redirectedUrl = '/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf';
+              console.log('Fetch: Redirecting font request from', url, 'to', redirectedUrl);
+              return originalFetch(redirectedUrl, init);
+            }
+            
+            if (url.includes('MaterialCommunityIcons') && url.includes('.ttf')) {
+              const redirectedUrl = '/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf';
+              console.log('Fetch: Redirecting font request from', url, 'to', redirectedUrl);
+              return originalFetch(redirectedUrl, init);
+            }
+            
+            return originalFetch(input, init);
+          };
+
+          // Intercept XMLHttpRequest
+          const originalXHR = window.XMLHttpRequest;
+          window.XMLHttpRequest = function() {
+            const xhr = new originalXHR();
+            const originalOpen = xhr.open;
+            xhr.open = function(method: string, url: string | URL, ...args: any[]) {
+              const urlStr = url.toString();
+              if (urlStr.includes('MaterialIcons') && urlStr.includes('.ttf')) {
+                const redirectedUrl = '/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf';
+                console.log('XHR: Redirecting font request from', urlStr, 'to', redirectedUrl);
+                return originalOpen.call(this, method, redirectedUrl, ...args);
+              }
+              if (urlStr.includes('MaterialCommunityIcons') && urlStr.includes('.ttf')) {
+                const redirectedUrl = '/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf';
+                console.log('XHR: Redirecting font request from', urlStr, 'to', redirectedUrl);
+                return originalOpen.call(this, method, redirectedUrl, ...args);
+              }
+              return originalOpen.call(this, method, url, ...args);
+            };
+            return xhr;
+          };
         };
 
-        // Also intercept XMLHttpRequest for older font loading methods
-        const originalXHR = window.XMLHttpRequest;
-        window.XMLHttpRequest = function() {
-          const xhr = new originalXHR();
-          const originalOpen = xhr.open;
-          xhr.open = function(method: string, url: string | URL, ...args: any[]) {
-            const urlStr = url.toString();
-            if (urlStr.includes('MaterialIcons') && urlStr.includes('.ttf')) {
-              const redirectedUrl = '/assets/fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf';
-              console.log('XHR Redirecting font request from', urlStr, 'to', redirectedUrl);
-              return originalOpen.call(this, method, redirectedUrl, ...args);
-            }
-            if (urlStr.includes('MaterialCommunityIcons') && urlStr.includes('.ttf')) {
-              const redirectedUrl = '/assets/fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf';
-              console.log('XHR Redirecting font request from', urlStr, 'to', redirectedUrl);
-              return originalOpen.call(this, method, redirectedUrl, ...args);
-            }
-            return originalOpen.call(this, method, url, ...args);
-          };
-          return xhr;
-        };
+        // Setup interception immediately
+        setupFontInterception();
+
+        // Also setup after DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupFontInterception);
+        }
+
+        // Setup after window load
+        window.addEventListener('load', setupFontInterception);
       } catch {}
     }
     // migrate existing sales data
