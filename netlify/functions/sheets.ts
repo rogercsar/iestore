@@ -45,7 +45,6 @@ const handler: Handler = async (event) => {
         });
         return { statusCode: 200, body: JSON.stringify(list) };
       }
-      }
       case 'POST': {
         if (!event.body) return { statusCode: 400, body: 'Missing body' };
         const body = JSON.parse(event.body);
