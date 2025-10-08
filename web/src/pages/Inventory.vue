@@ -171,7 +171,10 @@ import { useAppStore } from '../stores/app'
 import type { Product } from '../services/api'
 
 const store = useAppStore()
-const { products, loading, error } = store
+// Don't destructure to maintain reactivity
+const products = computed(() => store.products)
+const loading = computed(() => store.loading)
+const error = computed(() => store.error)
 
 const searchQuery = ref('')
 const categoryFilter = ref('')
@@ -191,7 +194,13 @@ const filteredProducts = computed(() => {
   console.log('📦 Raw products from store:', products.value)
   console.log('📦 Products length:', products.value?.length)
   
-  let filtered = products.value || []
+  // Ensure we have a valid array and wait for data to load
+  if (!products.value || !Array.isArray(products.value)) {
+    console.log('⏳ Products not ready yet, returning empty array')
+    return []
+  }
+  
+  let filtered = [...products.value] // Create a copy to avoid reactivity issues
   console.log('🔍 Initial filtered products:', filtered.length)
 
   if (searchQuery.value) {
@@ -252,6 +261,8 @@ const handleAddProduct = async () => {
       unitPrice: 0,
       quantity: 0
     }
+    // Refresh products after creating
+    await store.fetchProducts()
   } catch (error) {
     console.error('Erro ao criar produto:', error)
   }
@@ -266,6 +277,8 @@ const deleteProduct = async (id: string) => {
   if (confirm('Tem certeza que deseja excluir este produto?')) {
     try {
       await store.deleteProduct(id)
+      // Refresh products after deleting
+      await store.fetchProducts()
     } catch (error) {
       console.error('Erro ao deletar produto:', error)
     }
