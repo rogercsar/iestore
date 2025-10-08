@@ -1,6 +1,6 @@
 import './App.css'
 import { useEffect } from 'react'
-import { Card, Button, Icon } from './components'
+import { Card, Button } from './components'
 
 function App() {
   useEffect(() => {
