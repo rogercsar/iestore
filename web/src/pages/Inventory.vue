@@ -73,6 +73,9 @@
             <p class="product-category">{{ product.category || 'Sem categoria' }}</p>
           </div>
           <div class="product-actions">
+            <button class="action-btn share-btn" @click="shareProduct(product)">
+              <span>📤</span>
+            </button>
             <button class="action-btn edit-btn" @click="editProduct(product)">
               <span>✏️</span>
             </button>
@@ -162,6 +165,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Share Modal -->
+    <ShareModal 
+      v-if="selectedProduct"
+      :visible="showShareModal" 
+      :product="selectedProduct" 
+      @close="closeShareModal" 
+    />
   </div>
 </template>
 
@@ -169,6 +180,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAppStore } from '../stores/app'
 import type { Product } from '../services/api'
+import ShareModal from '../components/ShareModal.vue'
 
 const store = useAppStore()
 // Don't destructure to maintain reactivity
@@ -180,6 +192,8 @@ const searchQuery = ref('')
 const categoryFilter = ref('')
 const sortBy = ref('name')
 const showAddModal = ref(false)
+const showShareModal = ref(false)
+const selectedProduct = ref<Product | null>(null)
 
 const newProduct = ref({
   name: '',
@@ -283,6 +297,16 @@ const deleteProduct = async (id: string) => {
       console.error('Erro ao deletar produto:', error)
     }
   }
+}
+
+const shareProduct = (product: Product) => {
+  selectedProduct.value = product
+  showShareModal.value = true
+}
+
+const closeShareModal = () => {
+  showShareModal.value = false
+  selectedProduct.value = null
 }
 
 onMounted(() => {
@@ -498,6 +522,15 @@ onMounted(() => {
   justify-content: center;
   font-size: 1rem;
   transition: all 0.2s ease;
+}
+
+.share-btn {
+  background-color: #f0f9ff;
+  color: #0369a1;
+}
+
+.share-btn:hover {
+  background-color: #e0f2fe;
 }
 
 .edit-btn {
