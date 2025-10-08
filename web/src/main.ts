@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import './style.css'
+import './services/debug' // Import debug service
 
 // Import pages
 import Login from './pages/Login.vue'

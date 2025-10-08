@@ -1,7 +1,7 @@
 // Environment configuration
 export const environment = {
-  // Set to false to use real Google Sheets API
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true' || false, // Only use mock data if explicitly set
+  // Use real API in production, mock data only in development or when explicitly set
+  useMockData: import.meta.env.DEV || import.meta.env.VITE_USE_MOCK_DATA === 'true',
   
   // API Configuration
   apiBaseUrl: '/.netlify/functions/sheets',

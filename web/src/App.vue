@@ -2,7 +2,7 @@
   <div id="app">
     <!-- Navigation -->
     <nav class="nav">
-      <a href="/" class="nav-brand">🏪 i e store</a>
+      <router-link to="/dashboard" class="nav-brand">🏪 i e store</router-link>
       <div class="nav-menu">
         <button class="nav-toggle" @click="toggleSidebar">
           ☰

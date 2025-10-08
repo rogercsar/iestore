@@ -224,14 +224,17 @@ class ApiService {
     return this.request<Customer[]>('customers')
   }
 
-  async createCustomer(customer: Omit<Customer, 'id'>): Promise<void> {
-    await this.request('customers', {
+  async createCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
+    console.log('Creating customer:', customer)
+    const result = await this.request('customers', {
       method: 'POST',
       body: JSON.stringify({
         mode: 'append',
         rows: [customer]
       })
     })
+    console.log('Customer creation result:', result)
+    return { ...customer, id: Date.now().toString() } as Customer
   }
 
   async updateCustomer(id: string, customer: Partial<Customer>): Promise<void> {
