@@ -159,6 +159,36 @@ class ApiService {
 
       const data = JSON.parse(text)
       console.log(`✅ API returned valid data for ${endpoint}:`, data)
+      
+      // Process data to ensure correct types
+      if (endpoint === 'products') {
+        return data.map((product: any) => ({
+          ...product,
+          quantity: parseInt(product.quantity) || 0,
+          cost: parseFloat(product.cost) || 0,
+          unitPrice: parseFloat(product.unitPrice) || 0,
+          id: product.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }))
+      }
+      
+      if (endpoint === 'customers') {
+        return data.map((customer: any) => ({
+          ...customer,
+          id: customer.id || `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }))
+      }
+      
+      if (endpoint === 'sales') {
+        return data.map((sale: any) => ({
+          ...sale,
+          quantity: parseInt(sale.quantity) || 0,
+          totalValue: parseFloat(sale.totalValue) || 0,
+          totalCost: parseFloat(sale.totalCost) || 0,
+          profit: parseFloat(sale.profit) || 0,
+          id: sale.id || `sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }))
+      }
+      
       return data
     } catch (error) {
       console.error(`❌ API request failed for ${endpoint}:`, error)

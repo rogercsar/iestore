@@ -187,17 +187,24 @@ const newProduct = ref({
 })
 
 const filteredProducts = computed(() => {
+  console.log('🔍 Computing filtered products...')
+  console.log('📦 Raw products from store:', products.value)
+  console.log('📦 Products length:', products.value?.length)
+  
   let filtered = products.value || []
+  console.log('🔍 Initial filtered products:', filtered.length)
 
   if (searchQuery.value) {
     filtered = filtered.filter(product =>
       product.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       (product.category && product.category.toLowerCase().includes(searchQuery.value.toLowerCase()))
     )
+    console.log('🔍 After search filter:', filtered.length)
   }
 
   if (categoryFilter.value) {
     filtered = filtered.filter(product => product.category === categoryFilter.value)
+    console.log('🔍 After category filter:', filtered.length)
   }
 
   // Sort products
@@ -218,6 +225,7 @@ const filteredProducts = computed(() => {
     }
   })
 
+  console.log('✅ Final filtered products:', filtered.length)
   return filtered
 })
 

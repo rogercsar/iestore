@@ -42,8 +42,14 @@ export const useAppStore = defineStore('app', () => {
     try {
       setLoading(true)
       clearError()
-      products.value = await apiService.getProducts()
+      console.log('🔄 Fetching products from API...')
+      const fetchedProducts = await apiService.getProducts()
+      console.log('📦 Products fetched:', fetchedProducts)
+      console.log('📦 Products count:', fetchedProducts.length)
+      products.value = fetchedProducts
+      console.log('✅ Products stored in state:', products.value)
     } catch (err) {
+      console.error('❌ Error fetching products:', err)
       setError(err instanceof Error ? err.message : 'Erro ao carregar produtos')
     } finally {
       setLoading(false)
