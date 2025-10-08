@@ -89,9 +89,14 @@ const handleLogin = async () => {
 <style scoped>
 .login-container {
   min-height: 100vh;
+  width: 100vw;
   background: var(--background);
   display: flex;
   flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
 }
 
 .login-header {

@@ -21,7 +21,7 @@ import PublicProduct from './pages/PublicProduct.vue'
 
 // Router configuration
 const routes = [
-  { path: '/', redirect: '/login' },
+  { path: '/', redirect: '/dashboard' },
   { path: '/login', component: Login },
   { path: '/dashboard', component: Dashboard },
   { path: '/inventory', component: Inventory },
@@ -52,6 +52,10 @@ router.beforeEach((to, from, next) => {
   }
   // Se tem token e está indo para login, redireciona para dashboard
   else if (token && to.path === '/login') {
+    next('/dashboard')
+  }
+  // Se tem token e está indo para raiz, redireciona para dashboard
+  else if (token && to.path === '/') {
     next('/dashboard')
   }
   // Caso contrário, permite navegação

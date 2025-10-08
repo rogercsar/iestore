@@ -207,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 import NotificationCenter from '../components/NotificationCenter.vue'
@@ -311,6 +311,12 @@ const loadData = async () => {
 }
 
 onMounted(() => {
+  // Força o carregamento dos dados na primeira vez
+  loadData()
+})
+
+// Também carrega quando a rota é ativada
+onActivated(() => {
   loadData()
 })
 </script>
