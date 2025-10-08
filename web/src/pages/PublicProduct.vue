@@ -1,93 +1,115 @@
 <template>
-  <div class="public-product-container">
+  <div class="public-product-page">
+    <!-- Loading State -->
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
       <p class="loading-text">Carregando produto...</p>
     </div>
 
+    <!-- Error State -->
     <div v-else-if="!product" class="error-container">
       <div class="error-icon">⚠️</div>
       <h1 class="error-title">Produto não encontrado</h1>
       <p class="error-text">
         O produto que você está procurando não existe ou foi removido.
       </p>
+      <a href="/" class="back-link">← Voltar ao início</a>
     </div>
 
-    <div v-else class="public-product-content">
+    <!-- Product Content -->
+    <div v-else class="product-content">
       <!-- Header -->
-      <div class="header">
-        <div class="logo-container">
-          <span class="logo-icon">🏪</span>
-          <h1 class="logo-text">IEStore</h1>
+      <header class="page-header">
+        <div class="header-content">
+          <div class="logo-section">
+            <span class="logo-icon">🏪</span>
+            <h1 class="logo-text">IEStore</h1>
+          </div>
+          <p class="header-subtitle">Produtos de Qualidade</p>
         </div>
-      </div>
+      </header>
 
-      <!-- Product Card -->
-      <Card shadow="lg" class="product-card">
-        <div v-if="product.photo" class="photo-container">
-          <img :src="product.photo" :alt="product.name" class="product-photo" />
-        </div>
-        
-        <div class="product-header">
-          <h2 class="product-name">{{ product.name }}</h2>
-          <div class="stock-badge" :class="stockBadgeClass">
-            {{ product.quantity > 0 ? `${product.quantity} disponíveis` : 'Esgotado' }}
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Product Card -->
+        <div class="product-card">
+          <!-- Product Image -->
+          <div v-if="product.photo" class="product-image-section">
+            <img :src="product.photo" :alt="product.name" class="product-image" />
+          </div>
+          <div v-else class="product-image-placeholder">
+            <span class="placeholder-icon">📦</span>
+          </div>
+
+          <!-- Product Info -->
+          <div class="product-info-section">
+            <div class="product-header">
+              <h1 class="product-title">{{ product.name }}</h1>
+              <div class="stock-indicator" :class="stockClass">
+                <span class="stock-icon">{{ stockIcon }}</span>
+                <span class="stock-text">{{ stockText }}</span>
+              </div>
+            </div>
+
+            <!-- Price Section -->
+            <div class="price-section">
+              <div class="price-container">
+                <span class="price-label">Preço</span>
+                <span class="price-value">{{ formatCurrency(product.unitPrice) }}</span>
+                <span class="price-subtitle">Preço final</span>
+              </div>
+            </div>
+
+            <!-- Product Details -->
+            <div class="product-details">
+              <div class="detail-item">
+                <span class="detail-label">Nome:</span>
+                <span class="detail-value">{{ product.name }}</span>
+              </div>
+              
+              <div class="detail-item">
+                <span class="detail-label">Preço:</span>
+                <span class="detail-value price-highlight">{{ formatCurrency(product.unitPrice) }}</span>
+              </div>
+              
+              <div class="detail-item">
+                <span class="detail-label">Disponibilidade:</span>
+                <span class="detail-value" :class="stockTextClass">
+                  {{ product.quantity > 0 ? `${product.quantity} unidades disponíveis` : 'Produto esgotado' }}
+                </span>
+              </div>
+              
+              <div v-if="product.category" class="detail-item">
+                <span class="detail-label">Categoria:</span>
+                <span class="detail-value">{{ product.category }}</span>
+              </div>
+            </div>
+
+            <!-- Contact Section -->
+            <div class="contact-section">
+              <div class="contact-header">
+                <span class="contact-icon">📞</span>
+                <h3 class="contact-title">Interessado neste produto?</h3>
+              </div>
+              <p class="contact-description">
+                Entre em contato conosco para mais informações, esclarecer dúvidas ou fazer seu pedido.
+              </p>
+              <a :href="whatsappUrl" target="_blank" class="contact-button">
+                <span class="button-icon">💬</span>
+                <span class="button-text">Entrar em Contato</span>
+              </a>
+            </div>
           </div>
         </div>
-
-        <div class="price-section">
-          <p class="price-label">Preço</p>
-          <p class="price-value">{{ formatCurrency(product.unitPrice) }}</p>
-          <p class="price-subtext">Preço final</p>
-        </div>
-      </Card>
-
-      <!-- Product Info -->
-      <Card shadow="sm" class="info-card">
-        <h3 class="section-title">Informações do Produto</h3>
-        
-        <div class="info-row">
-          <span class="info-label">Nome:</span>
-          <span class="info-value">{{ product.name }}</span>
-        </div>
-        
-        <div class="info-row">
-          <span class="info-label">Preço:</span>
-          <span class="info-value price-value">{{ formatCurrency(product.unitPrice) }}</span>
-        </div>
-        
-        <div class="info-row">
-          <span class="info-label">Disponibilidade:</span>
-          <span class="info-value" :class="product.quantity > 0 ? 'available' : 'unavailable'">
-            {{ product.quantity > 0 ? `${product.quantity} unidades` : 'Esgotado' }}
-          </span>
-        </div>
-        
-        <div v-if="product.category" class="info-row">
-          <span class="info-label">Categoria:</span>
-          <span class="info-value">{{ product.category }}</span>
-        </div>
-      </Card>
-
-      <!-- Contact Info -->
-      <Card shadow="sm" class="contact-card">
-        <div class="contact-header">
-          <span class="contact-icon">📞</span>
-          <h3 class="contact-title">Interessado no produto?</h3>
-        </div>
-        <p class="contact-text">
-          Entre em contato conosco para mais informações ou para fazer seu pedido.
-        </p>
-        <button class="contact-button" @click="handleWhatsAppContact">
-          <span class="whatsapp-icon">💬</span>
-          Entrar em Contato
-        </button>
-      </Card>
+      </main>
 
       <!-- Footer -->
-      <div class="footer">
-        <p class="footer-text">© 2024 IEStore - Todos os direitos reservados</p>
-      </div>
+      <footer class="page-footer">
+        <div class="footer-content">
+          <p class="footer-text">© 2024 IEStore - Todos os direitos reservados</p>
+          <p class="footer-subtext">Produtos de qualidade para você</p>
+        </div>
+      </footer>
     </div>
   </div>
 </template>
@@ -95,15 +117,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import Card from '../components/Card.vue'
 import type { Product } from '../services/api'
 
 const route = useRoute()
-
 const product = ref<Product | null>(null)
-const loading = ref(false)
+const loading = ref(true)
 
-const stockBadgeClass = computed(() => {
+// Computed properties
+const stockClass = computed(() => {
   if (!product.value) return 'stock-empty'
   if (product.value.quantity === 0) return 'stock-empty'
   if (product.value.quantity <= 5) return 'stock-low'
@@ -111,6 +132,34 @@ const stockBadgeClass = computed(() => {
   return 'stock-good'
 })
 
+const stockIcon = computed(() => {
+  if (!product.value) return '❌'
+  if (product.value.quantity === 0) return '❌'
+  if (product.value.quantity <= 5) return '⚠️'
+  if (product.value.quantity <= 10) return '⚡'
+  return '✅'
+})
+
+const stockText = computed(() => {
+  if (!product.value) return 'Indisponível'
+  if (product.value.quantity === 0) return 'Esgotado'
+  if (product.value.quantity <= 5) return 'Últimas unidades'
+  if (product.value.quantity <= 10) return 'Estoque baixo'
+  return 'Em estoque'
+})
+
+const stockTextClass = computed(() => {
+  if (!product.value) return 'unavailable'
+  return product.value.quantity > 0 ? 'available' : 'unavailable'
+})
+
+const whatsappUrl = computed(() => {
+  if (!product.value) return '#'
+  const message = `Olá! Tenho interesse no produto: *${product.value.name}* - ${formatCurrency(product.value.unitPrice)}`
+  return `https://wa.me/?text=${encodeURIComponent(message)}`
+})
+
+// Methods
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -119,49 +168,57 @@ const formatCurrency = (value: number) => {
 }
 
 const loadProduct = async () => {
-  loading.value = true
   try {
+    loading.value = true
+    
     // Get product name from route params
     const productName = route.params.name as string
+    console.log('Loading product:', productName)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (!productName) {
+      throw new Error('Nome do produto não fornecido')
+    }
+
+    // Decode the product name (convert from URL format back to original)
+    const decodedName = decodeURIComponent(productName.replace(/-/g, ' '))
+    console.log('Decoded product name:', decodedName)
+
+    // Fetch products from API
+    const response = await fetch('/.netlify/functions/sheets?table=products')
     
-    // Mock product data
-    const mockProducts: Product[] = [
-      {
-        id: '1',
-        name: 'Produto A',
-        quantity: 15,
-        cost: 30,
-        unitPrice: 50,
-        photo: 'https://via.placeholder.com/200x200?text=Produto+A'
-      },
-      {
-        id: '2',
-        name: 'Produto B',
-        quantity: 8,
-        cost: 40,
-        unitPrice: 80,
-        photo: 'https://via.placeholder.com/200x200?text=Produto+B'
+    if (!response.ok) {
+      throw new Error('Erro ao carregar produtos')
+    }
+
+    const products: Product[] = await response.json()
+    console.log('Products loaded:', products)
+
+    // Find the product by name (case insensitive)
+    const foundProduct = products.find(p => 
+      p.name.toLowerCase() === decodedName.toLowerCase()
+    )
+
+    if (foundProduct) {
+      // Process the product data
+      product.value = {
+        ...foundProduct,
+        quantity: parseInt(foundProduct.quantity.toString()) || 0,
+        cost: parseFloat(foundProduct.cost.toString()) || 0,
+        unitPrice: parseFloat(foundProduct.unitPrice.toString()) || 0,
+        category: foundProduct.category || 'Outros'
       }
-    ]
-    
-    product.value = mockProducts.find(p => p.name === productName) || null
+      console.log('Product found:', product.value)
+    } else {
+      console.log('Product not found. Available products:', products.map(p => p.name))
+      product.value = null
+    }
+
   } catch (error) {
     console.error('Error loading product:', error)
+    product.value = null
   } finally {
     loading.value = false
   }
-}
-
-const handleWhatsAppContact = () => {
-  if (!product.value) return
-  
-  const message = `Olá! Gostaria de saber mais sobre o produto: *${product.value.name}* - ${formatCurrency(product.value.unitPrice)}`
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
-  
-  window.open(whatsappUrl, '_blank')
 }
 
 onMounted(() => {
@@ -170,43 +227,52 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.public-product-container {
+.public-product-page {
   min-height: 100vh;
-  background-color: var(--gray-50);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Loading State */
 .loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: var(--gray-50);
+  background: white;
 }
 
 .loading-spinner {
-  width: 3rem;
-  height: 3rem;
-  border: 3px solid var(--gray-200);
-  border-top: 3px solid var(--primary);
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
-.loading-text {
-  margin-top: 1rem;
-  font-size: 1rem;
-  color: var(--gray-600);
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
+.loading-text {
+  margin-top: 1rem;
+  color: #64748b;
+  font-size: 1rem;
+}
+
+/* Error State */
 .error-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: var(--gray-50);
+  background: white;
   padding: 2rem;
+  text-align: center;
 }
 
 .error-icon {
@@ -215,275 +281,377 @@ onMounted(() => {
 }
 
 .error-title {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  color: var(--gray-800);
+  color: #1f2937;
   margin-bottom: 0.5rem;
 }
 
 .error-text {
-  font-size: 1rem;
-  color: var(--gray-600);
+  font-size: 1.125rem;
+  color: #6b7280;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.back-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid #3b82f6;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.back-link:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Header */
+.page-header {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem 0;
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
   text-align: center;
-  line-height: 1.5;
 }
 
-.public-product-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.header {
-  background-color: white;
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--gray-200);
-  border-radius: 0.75rem;
-}
-
-.logo-container {
+.logo-section {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .logo-icon {
   font-size: 2rem;
-  color: var(--primary);
 }
 
 .logo-text {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 800;
-  color: var(--primary);
+  color: #1f2937;
+  margin: 0;
+}
+
+.header-subtitle {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Main Content */
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
 }
 
 .product-card {
-  max-width: 32rem;
-  margin: 0 auto;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  min-height: 600px;
 }
 
-.photo-container {
+/* Product Image */
+.product-image-section {
+  background: #f8fafc;
   display: flex;
+  align-items: center;
   justify-content: center;
-  margin-bottom: 1rem;
+  padding: 2rem;
 }
 
-.product-photo {
-  width: 12.5rem;
-  height: 12.5rem;
-  border-radius: 0.75rem;
-  background-color: var(--gray-100);
-  object-fit: cover;
+.product-image {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+}
+
+.product-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  padding: 2rem;
+}
+
+.placeholder-icon {
+  font-size: 8rem;
+  color: #cbd5e1;
+}
+
+/* Product Info */
+.product-info-section {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .product-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5rem;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.product-name {
-  font-size: 1.75rem;
+.product-title {
+  font-size: 2.5rem;
   font-weight: 800;
-  color: var(--gray-800);
-  flex: 1;
-  margin-right: 1rem;
+  color: #1f2937;
+  margin: 0;
+  line-height: 1.2;
 }
 
-.stock-badge {
+.stock-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
+  border-radius: 2rem;
   font-weight: 600;
+  font-size: 0.875rem;
+  width: fit-content;
+}
+
+.stock-indicator.stock-good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.stock-indicator.stock-medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.stock-indicator.stock-low {
+  background: #fed7aa;
+  color: #c2410c;
+}
+
+.stock-indicator.stock-empty {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Price Section */
+.price-section {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-radius: 1rem;
+  padding: 2rem;
+  text-align: center;
   color: white;
 }
 
-.stock-empty {
-  background-color: var(--danger);
-}
-
-.stock-low {
-  background-color: var(--warning);
-}
-
-.stock-medium {
-  background-color: #f59e0b;
-}
-
-.stock-good {
-  background-color: var(--success);
-}
-
-.price-section {
-  text-align: center;
-  padding: 1.5rem;
-  background-color: var(--gray-50);
-  border-radius: 0.75rem;
+.price-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .price-label {
   font-size: 1rem;
-  color: var(--gray-600);
-  margin-bottom: 0.5rem;
+  opacity: 0.9;
 }
 
 .price-value {
-  font-size: 2.25rem;
+  font-size: 3rem;
   font-weight: 800;
-  color: var(--primary);
-  margin-bottom: 0.25rem;
+  margin: 0;
 }
 
-.price-subtext {
+.price-subtitle {
   font-size: 0.875rem;
-  color: var(--gray-600);
+  opacity: 0.8;
 }
 
-.info-card {
-  max-width: 32rem;
-  margin: 0 auto;
+/* Product Details */
+.product-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.section-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--gray-800);
-  margin-bottom: 1rem;
-}
-
-.info-row {
+.detail-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0;
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.info-label {
-  font-size: 1rem;
-  color: var(--gray-600);
-  flex: 1;
+.detail-item:last-child {
+  border-bottom: none;
 }
 
-.info-value {
-  font-size: 1rem;
+.detail-label {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.detail-value {
   font-weight: 600;
-  color: var(--gray-800);
+  color: #1f2937;
 }
 
-.info-value.price-value {
-  color: var(--primary);
+.detail-value.price-highlight {
+  color: #059669;
   font-weight: 700;
 }
 
-.info-value.available {
-  color: var(--success);
+.detail-value.available {
+  color: #059669;
 }
 
-.info-value.unavailable {
-  color: var(--danger);
+.detail-value.unavailable {
+  color: #dc2626;
 }
 
-.contact-card {
-  max-width: 32rem;
-  margin: 0 auto;
+/* Contact Section */
+.contact-section {
+  background: #f8fafc;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  text-align: center;
 }
 
 .contact-header {
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
 .contact-icon {
   font-size: 1.5rem;
-  color: var(--primary);
-  margin-right: 0.5rem;
 }
 
 .contact-title {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--gray-800);
+  color: #1f2937;
+  margin: 0;
 }
 
-.contact-text {
-  font-size: 0.875rem;
-  color: var(--gray-600);
+.contact-description {
+  color: #6b7280;
   margin-bottom: 1.5rem;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .contact-button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background: #25D366;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
   gap: 0.5rem;
-  width: 100%;
-  transition: all 0.2s ease;
+  background: #25d366;
+  color: white;
+  text-decoration: none;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1.125rem;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .contact-button:hover {
-  background: #128C7E;
-  transform: translateY(-1px);
+  background: #128c7e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.whatsapp-icon {
+.button-icon {
   font-size: 1.25rem;
 }
 
-.footer {
-  padding: 1.5rem;
+/* Footer */
+.page-footer {
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  padding: 2rem 0;
+  margin-top: 2rem;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
   text-align: center;
 }
 
 .footer-text {
-  font-size: 0.75rem;
-  color: var(--gray-500);
+  color: #6b7280;
+  margin: 0 0 0.5rem 0;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.footer-subtext {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  margin: 0;
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
-  .public-product-content {
-    padding: 0.5rem;
+  .product-card {
+    grid-template-columns: 1fr;
   }
   
-  .product-header {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .product-name {
-    margin-right: 0;
-  }
-  
-  .product-photo {
-    width: 10rem;
-    height: 10rem;
+  .product-title {
+    font-size: 2rem;
   }
   
   .price-value {
-    font-size: 1.875rem;
+    font-size: 2.5rem;
+  }
+  
+  .main-content {
+    padding: 1rem;
+  }
+  
+  .product-info-section {
+    padding: 1.5rem;
+  }
+  
+  .header-content {
+    padding: 0 1rem;
+  }
+  
+  .logo-text {
+    font-size: 1.5rem;
+  }
+  
+  .logo-icon {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .product-title {
+    font-size: 1.75rem;
+  }
+  
+  .price-value {
+    font-size: 2rem;
+  }
+  
+  .contact-button {
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
   }
 }
 </style>

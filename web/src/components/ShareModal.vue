@@ -110,7 +110,11 @@ const linkCopied = ref(false)
 
 const productUrl = computed(() => {
   const baseUrl = window.location.origin
-  const productName = encodeURIComponent(props.product.name.toLowerCase().replace(/\s+/g, '-'))
+  // Convert product name to URL-friendly format
+  const productName = props.product.name
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
   return `${baseUrl}/public/product/${productName}`
 })
 
