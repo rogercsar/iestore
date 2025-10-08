@@ -25,11 +25,9 @@
         <div class="filter-group">
           <select class="filter-select" v-model="categoryFilter">
             <option value="">Todos</option>
-            <option value="Eletrônicos">Eletrônicos</option>
-            <option value="Roupas">Roupas</option>
-            <option value="Casa">Casa</option>
-            <option value="Esportes">Esportes</option>
-            <option value="Livros">Livros</option>
+            <option v-for="category in availableCategories" :key="category" :value="category">
+              {{ category }}
+            </option>
           </select>
         </div>
         
@@ -181,6 +179,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAppStore } from '../stores/app'
 import type { Product } from '../services/api'
 import ShareModal from '../components/ShareModal.vue'
+import { ProductCategorizer } from '../utils/categorizer'
 
 const store = useAppStore()
 // Don't destructure to maintain reactivity
@@ -201,6 +200,21 @@ const newProduct = ref({
   cost: 0,
   unitPrice: 0,
   quantity: 0
+})
+
+const availableCategories = computed(() => {
+  if (!products.value || !Array.isArray(products.value)) {
+    return ProductCategorizer.getAllCategories()
+  }
+  
+  const categories = new Set<string>()
+  products.value.forEach(product => {
+    if (product.category) {
+      categories.add(product.category)
+    }
+  })
+  
+  return Array.from(categories).sort()
 })
 
 const filteredProducts = computed(() => {

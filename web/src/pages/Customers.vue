@@ -314,15 +314,22 @@ const viewCustomerSales = (customerId: string) => {
 }
 
 const handleAddCustomer = async () => {
-  console.log('New customer:', newCustomer.value)
-  // TODO: Implement add customer functionality
-  showAddModal.value = false
-  newCustomer.value = {
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    status: 'active'
+  try {
+    console.log('Creating customer:', newCustomer.value)
+    await store.createCustomer(newCustomer.value)
+    showAddModal.value = false
+    newCustomer.value = {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      status: 'active'
+    }
+    // Refresh customers after creating
+    await store.fetchCustomers()
+  } catch (error) {
+    console.error('Erro ao criar cliente:', error)
+    alert('Erro ao criar cliente. Tente novamente.')
   }
 }
 

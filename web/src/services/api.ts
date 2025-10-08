@@ -1,5 +1,6 @@
 // API service for Google Sheets integration
 import { environment } from '../config/environment'
+import { ProductCategorizer } from '../utils/categorizer'
 
 const API_BASE_URL = environment.apiBaseUrl
 const USE_MOCK_DATA = environment.useMockData
@@ -167,6 +168,7 @@ class ApiService {
           quantity: parseInt(product.quantity) || 0,
           cost: parseFloat(product.cost) || 0,
           unitPrice: parseFloat(product.unitPrice) || 0,
+          category: product.category || ProductCategorizer.categorize(product.name),
           id: product.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         }))
       }

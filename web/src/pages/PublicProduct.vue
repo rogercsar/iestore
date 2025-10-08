@@ -18,7 +18,7 @@
       <div class="header">
         <div class="logo-container">
           <span class="logo-icon">🏪</span>
-          <h1 class="logo-text">inCRM Store</h1>
+          <h1 class="logo-text">IEStore</h1>
         </div>
       </div>
 
@@ -62,6 +62,11 @@
             {{ product.quantity > 0 ? `${product.quantity} unidades` : 'Esgotado' }}
           </span>
         </div>
+        
+        <div v-if="product.category" class="info-row">
+          <span class="info-label">Categoria:</span>
+          <span class="info-value">{{ product.category }}</span>
+        </div>
       </Card>
 
       <!-- Contact Info -->
@@ -81,7 +86,7 @@
 
       <!-- Footer -->
       <div class="footer">
-        <p class="footer-text">© 2024 inCRM Store - Todos os direitos reservados</p>
+        <p class="footer-text">© 2024 IEStore - Todos os direitos reservados</p>
       </div>
     </div>
   </div>
@@ -153,10 +158,9 @@ const loadProduct = async () => {
 const handleWhatsAppContact = () => {
   if (!product.value) return
   
-  const message = `Olá! Gostaria de saber mais sobre o produto: *${product.value.name}*`
-  const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`
+  const message = `Olá! Gostaria de saber mais sobre o produto: *${product.value.name}* - ${formatCurrency(product.value.unitPrice)}`
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
   
-  // Try to open WhatsApp app, fallback to web if not available
   window.open(whatsappUrl, '_blank')
 }
 
