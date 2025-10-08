@@ -1,6 +1,6 @@
 [build]
-  command = "cd web && npm ci && npm run build"
-  publish = "web/dist"
+  command = "npm ci && npm run build"
+  publish = "dist"
 
 # Serve built assets without SPA rewrite
 [[redirects]]
@@ -8,12 +8,6 @@
   to = "/assets/:splat"
   status = 200
   force = true
-
-# API functions
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
 
 # Catch-all SPA route for Vue app
 [[redirects]]
@@ -27,7 +21,6 @@
     Access-Control-Allow-Origin = "*"
     Cache-Control = "public, max-age=31536000, immutable"
 
-
 [[headers]]
   for = "/*.html"
   [headers.values]
@@ -37,6 +30,5 @@
 [build.environment]
   NODE_VERSION = "20"
 
-[functions]
-  directory = "netlify/functions"
-
+# Note: Functions não estarão disponíveis nesta configuração
+# Para usar Google Sheets API, você precisará configurar as functions separadamente
