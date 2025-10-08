@@ -1,6 +1,6 @@
 // Environment configuration
 export const environment = {
-  // Use real API in production, mock data only in development or when explicitly set
+  // Use real Google Sheets API now that credentials are working
   useMockData: import.meta.env.DEV || import.meta.env.VITE_USE_MOCK_DATA === 'true',
   
   // API Configuration

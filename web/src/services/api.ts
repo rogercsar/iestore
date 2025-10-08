@@ -138,6 +138,13 @@ class ApiService {
       if (!response.ok) {
         const errorText = await response.text()
         console.error(`API Error ${response.status}:`, errorText)
+        
+        // If it's a Google Sheets authentication error, fall back to mock data
+        if (errorText.includes('invalid_grant') || errorText.includes('account not found')) {
+          console.warn('Google Sheets authentication failed, falling back to mock data')
+          return this.getMockData<T>(endpoint, options)
+        }
+        
         throw new Error(`API Error: ${response.status} ${response.statusText}`)
       }
 
