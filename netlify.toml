@@ -15,7 +15,14 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# Catch-all SPA route for Vue app
+# Public product pages - serve separate HTML file
+[[redirects]]
+  from = "/public/product/*"
+  to = "/public-product.html"
+  status = 200
+  force = true
+
+# Catch-all SPA route for Vue app (main system)
 [[redirects]]
   from = "/*"
   to = "/index.html"

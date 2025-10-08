@@ -314,6 +314,22 @@ const viewCustomerSales = (customerId: string) => {
 }
 
 const handleAddCustomer = async () => {
+  // Validação dos campos obrigatórios
+  if (!newCustomer.value.name.trim()) {
+    alert('Nome é obrigatório')
+    return
+  }
+  
+  if (!newCustomer.value.email.trim()) {
+    alert('Email é obrigatório')
+    return
+  }
+  
+  if (!newCustomer.value.phone.trim()) {
+    alert('Telefone é obrigatório')
+    return
+  }
+
   try {
     console.log('Creating customer:', newCustomer.value)
     await store.createCustomer(newCustomer.value)
@@ -327,6 +343,7 @@ const handleAddCustomer = async () => {
     }
     // Refresh customers after creating
     await store.fetchCustomers()
+    alert('Cliente criado com sucesso!')
   } catch (error) {
     console.error('Erro ao criar cliente:', error)
     alert('Erro ao criar cliente. Tente novamente.')
