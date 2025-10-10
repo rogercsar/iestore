@@ -131,13 +131,16 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Foto (URL)</label>
-            <input
-              v-model="activeUser.photo"
-              type="url"
-              class="form-input"
-              placeholder="https://..."
-            />
+            <label class="form-label">Foto</label>
+            <div class="photo-upload">
+              <div v-if="activeUser.photo" class="photo-preview">
+                <img :src="activeUser.photo" :alt="activeUser.name" class="photo-image" />
+                <button type="button" class="remove-photo" @click="removePhoto">Remover</button>
+              </div>
+              <div v-else class="photo-input-row">
+                <input type="file" accept="image/*" @change="onPhotoChange" />
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
@@ -218,6 +221,7 @@ const activeUser = ref({
   password: '',
   role: 'user' as 'admin' | 'user'
 })
+const uploadInProgress = ref(false)
 
 const goBack = () => {
   router.go(-1)
@@ -281,7 +285,23 @@ const handleAddUser = async () => {
       role: activeUser.value.role,
       status: 'active'
     }
-    // Persist via Netlify Function (append)
+    // Upload photo to Cloudinary if provided (dataURL way)
+    const fileEl = (document.querySelector('.photo-input-row input[type="file"]') as HTMLInputElement | null)
+    const file = fileEl?.files?.[0] || null
+    if (file) {
+      uploadInProgress.value = true
+      const reader = new FileReader()
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      const up = await fetch('/.netlify/functions/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) })
+      const upJson = await up.json()
+      if (up.ok && upJson.url) activeUser.value.photo = upJson.url
+      uploadInProgress.value = false
+    }
+
     const res = await fetch('/.netlify/functions/postgres?table=users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -299,20 +319,10 @@ const handleAddUser = async () => {
     showAddForm.value = false
     alert('Usuário criado com sucesso!')
   } catch (error) {
-    console.error('Falha ao criar usuário na API. Mantendo localmente.', error)
-    // Fallback local (não persistente)
-    users.value.push({
-      id: `user_${Date.now()}`,
-      name: activeUser.value.name.trim(),
-      username: activeUser.value.username.trim(),
-      email: activeUser.value.email.trim(),
-      role: activeUser.value.role,
-      status: 'active'
-    })
-    resetActive()
-    showAddForm.value = false
+    console.error('Falha ao criar usuário na API.', error)
   } finally {
     loading.value = false
+    uploadInProgress.value = false
   }
 }
 
@@ -373,6 +383,24 @@ const handleUpdateUser = async () => {
       loading.value = false
       return
     }
+
+    // Upload new photo if a new file was selected
+    const fileEl = (document.querySelector('.photo-input-row input[type="file"]') as HTMLInputElement | null)
+    const file = fileEl?.files?.[0] || null
+    if (file) {
+      uploadInProgress.value = true
+      const reader = new FileReader()
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      const up = await fetch('/.netlify/functions/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) })
+      const upJson = await up.json()
+      if (up.ok && upJson.url) patch.photo = upJson.url
+      uploadInProgress.value = false
+    }
+
     if (activeUser.value.password && activeUser.value.password.trim()) {
       patch.password = activeUser.value.password
     }
@@ -389,6 +417,7 @@ const handleUpdateUser = async () => {
     console.error('Falha ao atualizar usuário', e)
   } finally {
     loading.value = false
+    uploadInProgress.value = false
   }
 }
 
@@ -425,6 +454,16 @@ const handleDeleteUser = async (userId: string) => {
     console.warn('Falha ao excluir na API. Revertendo local.', e)
     users.value = prev
   }
+}
+
+const onPhotoChange = (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0] || null
+  // apenas marcador; upload real ocorre no submit
+}
+
+const removePhoto = () => {
+  activeUser.value.photo = ''
 }
 
 onMounted(() => {
@@ -596,6 +635,13 @@ onMounted(() => {
   margin-bottom: 0.75rem;
 }
 
+.user-username {
+  font-size: 0.8125rem;
+  color: var(--gray-500);
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .user-badges {
   display: flex;
   gap: 0.5rem;
@@ -733,6 +779,12 @@ onMounted(() => {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
+
+.photo-upload { display:flex; flex-direction: column; gap:.5rem; }
+.photo-preview { display:flex; align-items:center; gap:.75rem; }
+.photo-image { width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid var(--gray-300); }
+.remove-photo { border:1px solid var(--gray-300); background:#fff; border-radius:.375rem; padding:.25rem .5rem; cursor:pointer; }
+.photo-input-row input[type="file"] { width:100%; }
 
 .role-buttons {
   display: flex;
