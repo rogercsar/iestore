@@ -168,7 +168,14 @@
               <div v-else class="image-upload-placeholder">
                 <span class="upload-icon">📷</span>
                 <p class="upload-text">Nenhuma imagem selecionada</p>
-                <button type="button" class="upload-btn" @click="showImageUploadOptions">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  @change="handleImageUpload" 
+                  ref="fileInput"
+                  style="display: none"
+                />
+                <button type="button" class="upload-btn" @click="triggerFileInput">
                   Selecionar Imagem
                 </button>
               </div>
@@ -197,12 +204,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 import type { Product } from '../services/api'
 import ShareModal from '../components/ShareModal.vue'
 import { ProductCategorizer } from '../utils/categorizer'
 
 const store = useAppStore()
+const router = useRouter()
 // Don't destructure to maintain reactivity
 const products = computed(() => store.products)
 const loading = computed(() => store.loading)
@@ -214,6 +223,7 @@ const sortBy = ref('name')
 const showAddModal = ref(false)
 const showShareModal = ref(false)
 const selectedProduct = ref<Product | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const newProduct = ref({
   name: '',
@@ -320,20 +330,34 @@ const handleAddProduct = async () => {
 }
 
 // Image upload functions
-const showImageUploadOptions = () => {
-  // In a real app, this would show image picker options
-  alert('Funcionalidade de seleção de imagem será implementada')
-  // For now, add a placeholder image
-  newProduct.value.photo = 'https://via.placeholder.com/200x200?text=Produto+Novo'
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const handleImageUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const result = e.target?.result as string
+      newProduct.value.photo = result
+    }
+    reader.readAsDataURL(file)
+  }
 }
 
 const removeNewProductImage = () => {
   newProduct.value.photo = ''
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
 }
 
 const editProduct = (product: Product) => {
-  // TODO: Implementar edição de produto
-  console.log('Editar produto:', product)
+  // Navigate to edit product page
+  router.push(`/edit-product/${product.id}`)
 }
 
 const deleteProduct = async (id: string) => {
@@ -788,6 +812,88 @@ onMounted(() => {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Image Upload Styles */
+.image-upload-container {
+  border: 2px dashed #d1d5db;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.image-upload-container:hover {
+  border-color: #3b82f6;
+  background-color: #f8fafc;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.preview-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.remove-image-btn:hover {
+  background: #dc2626;
+}
+
+.image-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upload-icon {
+  font-size: 2rem;
+  color: #9ca3af;
+}
+
+.upload-text {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.upload-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {

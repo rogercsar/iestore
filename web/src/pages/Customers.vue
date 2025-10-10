@@ -234,7 +234,7 @@ const filteredCustomers = computed(() => {
     console.log('🔍 After search filter:', filtered.length)
   }
 
-  if (statusFilter.value) {
+  if (statusFilter.value && statusFilter.value !== '') {
     console.log('🔍 Status filter active:', statusFilter.value)
     filtered = filtered.filter(customer => {
       const customerStatus = customer.status || 'active'
@@ -242,6 +242,8 @@ const filteredCustomers = computed(() => {
       return customerStatus === statusFilter.value
     })
     console.log('🔍 After status filter:', filtered.length)
+  } else {
+    console.log('🔍 No status filter applied')
   }
 
   // Sort customers
