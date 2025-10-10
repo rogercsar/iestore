@@ -227,7 +227,7 @@ const exportCSV = () => {
 </script>
 
 <style scoped>
-.campaigns-container { flex:1; background:linear-gradient(135deg,#f8fafc,#e2e8f0); padding:1.5rem; min-height:100vh; }
+.campaigns-container { flex:1; background:linear-gradient(135deg,#f8fafc,#e2e8f0); padding:1.5rem; min-height:100vh; box-sizing: border-box; }
 .campaigns-header { display:flex; justify-content:space-between; align-items:center; padding:2rem; background:linear-gradient(145deg,#fff,#f8fafc); border-radius:16px; border:1px solid rgba(226,232,240,.8); margin-bottom:2rem; }
 .campaigns-title { font-size:2rem; font-weight:800; color:#1e293b; margin-bottom:.5rem; }
 .campaigns-subtitle { color:#64748b; }
@@ -246,8 +246,14 @@ const exportCSV = () => {
 .pagination { display:flex; align-items:center; justify-content:center; gap:.75rem; margin-top:1rem; }
 .page-btn { padding:.375rem .75rem; border:none; border-radius:.5rem; background:#e2e8f0; cursor:pointer; }
 .page-info { color:#64748b; font-weight:600; }
-.modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.4); display:flex; align-items:center; justify-content:center; }
-.modal { background:#fff; border-radius:12px; padding:1.5rem; width:min(720px,96vw); }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 1000; }
+.modal { background:#fff; border-radius:12px; padding:1.5rem; width:min(720px,96vw); max-height: 90vh; overflow: auto; box-sizing: border-box; box-shadow: 0 20px 25px rgba(0,0,0,.15); }
+.modal-title { position: sticky; top: 0; background: #fff; padding-bottom: .5rem; margin-bottom: 1rem; z-index: 1; }
+.filters-card { overflow: hidden; }
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .campaigns-header { padding: 1rem; }
+}
 .modal-title { font-weight:800; color:#1e293b; margin-bottom:1rem; }
 .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
 .form-field { display:flex; flex-direction:column; gap:.25rem; }
