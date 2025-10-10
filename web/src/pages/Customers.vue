@@ -92,7 +92,7 @@
           </div>
           <div class="customer-info">
             <h3 class="customer-name">{{ customer.name }}</h3>
-            <p class="customer-email">{{ customer.email }}</p>
+            <p class="customer-email">{{ customer.email || 'Sem email' }}</p>
             <p class="customer-phone">{{ customer.phone || 'Sem telefone' }}</p>
           </div>
           <div class="customer-actions">
@@ -225,10 +225,16 @@ const filteredCustomers = computed(() => {
     console.log('🔍 Customer status values:', filtered.map(c => ({ name: c.name, status: c.status })))
   }
 
+  // Force reactivity by ensuring we have a proper array
+  if (!Array.isArray(filtered)) {
+    console.warn('⚠️ Customers is not an array:', filtered)
+    filtered = []
+  }
+
   if (searchQuery.value) {
     filtered = filtered.filter(customer =>
       customer.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      (customer.email && customer.email.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
       (customer.phone && customer.phone.includes(searchQuery.value))
     )
     console.log('🔍 After search filter:', filtered.length)
@@ -252,7 +258,7 @@ const filteredCustomers = computed(() => {
       case 'name':
         return a.name.localeCompare(b.name)
       case 'email':
-        return a.email.localeCompare(b.email)
+        return (a.email || '').localeCompare(b.email || '')
       case 'created':
         return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
       case 'sales':
