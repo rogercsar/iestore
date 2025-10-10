@@ -22,6 +22,7 @@ import PublicProduct from './pages/PublicProduct.vue'
 import PublicCampaign from './pages/PublicCampaign.vue'
 import Promotions from './pages/Promotions.vue'
 import Campaigns from './pages/Campaigns.vue'
+import Reports from './pages/Reports.vue'
 
 // Router configuration
 const routes = [
@@ -37,6 +38,7 @@ const routes = [
   { path: '/users', component: Users },
   { path: '/promotions', component: Promotions },
   { path: '/campaigns', component: Campaigns },
+  { path: '/reports', component: Reports },
   { path: '/pending-payments', component: PendingPayments },
   { path: '/product/:id', component: ProductDetails },
   { path: '/product/:id/edit', component: EditProduct },

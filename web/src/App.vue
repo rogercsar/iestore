@@ -53,6 +53,10 @@
           <span class="nav-item-icon">📣</span>
           Campanhas
         </router-link>
+        <router-link to="/reports" class="nav-item" @click="closeSidebar">
+          <span class="nav-item-icon">📊</span>
+          Relatórios
+        </router-link>
               <router-link to="/pending-payments" class="nav-item" @click="closeSidebar">
                 <span class="nav-item-icon">💰</span>
                 Pagamentos Pendentes

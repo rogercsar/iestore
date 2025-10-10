@@ -6,10 +6,16 @@
         <h1 class="inventory-title">Estoque</h1>
         <p class="inventory-subtitle">Gerencie seu inventário de produtos</p>
       </div>
-      <button class="add-button" @click="showAddModal = true">
-        <span class="add-icon">➕</span>
-        <span class="add-text">Adicionar Produto</span>
-      </button>
+      <div class="header-actions">
+        <button class="export-button" @click="exportToPDF">
+          <span class="export-icon">📄</span>
+          <span class="export-text">Exportar PDF</span>
+        </button>
+        <button class="add-button" @click="showAddModal = true">
+          <span class="add-icon">➕</span>
+          <span class="add-text">Adicionar Produto</span>
+        </button>
+      </div>
     </div>
 
     <!-- Filters Card -->
@@ -384,6 +390,110 @@ const shareProduct = (product: Product) => {
 const closeShareModal = () => {
   showShareModal.value = false
   selectedProduct.value = null
+}
+
+const exportToPDF = () => {
+  try {
+    // Criar conteúdo HTML para o PDF
+    const products = filteredProducts.value
+    const totalProducts = products.length
+    const totalValue = products.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0)
+    const totalCost = products.reduce((sum, p) => sum + (p.quantity * p.cost), 0)
+    const totalProfit = totalValue - totalCost
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Relatório de Estoque - ${new Date().toLocaleDateString('pt-BR')}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .summary { display: flex; justify-content: space-around; margin-bottom: 30px; background: #f5f5f5; padding: 20px; border-radius: 8px; }
+          .summary-item { text-align: center; }
+          .summary-value { font-size: 24px; font-weight: bold; color: #2563eb; }
+          .summary-label { font-size: 14px; color: #666; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #f8fafc; font-weight: bold; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          .footer { margin-top: 30px; text-align: center; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Relatório de Estoque</h1>
+          <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        </div>
+        
+        <div class="summary">
+          <div class="summary-item">
+            <div class="summary-value">${totalProducts}</div>
+            <div class="summary-label">Total de Produtos</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value">R$ ${totalValue.toFixed(2)}</div>
+            <div class="summary-label">Valor Total</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value">R$ ${totalCost.toFixed(2)}</div>
+            <div class="summary-label">Custo Total</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value">R$ ${totalProfit.toFixed(2)}</div>
+            <div class="summary-label">Lucro Total</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th class="text-center">Quantidade</th>
+              <th class="text-right">Custo Unit.</th>
+              <th class="text-right">Preço Unit.</th>
+              <th class="text-right">Valor Total</th>
+              <th class="text-right">Lucro</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${products.map(p => `
+              <tr>
+                <td>${p.name}</td>
+                <td class="text-center">${p.quantity}</td>
+                <td class="text-right">R$ ${p.cost.toFixed(2)}</td>
+                <td class="text-right">R$ ${p.unitPrice.toFixed(2)}</td>
+                <td class="text-right">R$ ${(p.quantity * p.unitPrice).toFixed(2)}</td>
+                <td class="text-right">R$ ${(p.quantity * (p.unitPrice - p.cost)).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <p>Relatório gerado automaticamente pelo sistema iEstore</p>
+        </div>
+      </body>
+      </html>
+    `
+
+    // Abrir em nova janela para impressão/PDF
+    const printWindow = window.open('', '_blank')
+    printWindow.document.write(htmlContent)
+    printWindow.document.close()
+    printWindow.focus()
+    
+    // Aguardar carregamento e imprimir
+    setTimeout(() => {
+      printWindow.print()
+    }, 500)
+
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error)
+    alert('Erro ao gerar PDF. Tente novamente.')
+  }
 }
 
 // Função removida - produtos duplicados foram identificados e corrigidos
@@ -956,6 +1066,43 @@ onMounted(async () => {
   transform: translateY(-1px);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.export-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.export-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.export-icon {
+  font-size: 1rem;
+}
+
+.export-text {
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .inventory-container {
     padding: 0.5rem;
@@ -967,7 +1114,13 @@ onMounted(async () => {
     align-items: stretch;
   }
   
-  .add-button {
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+  
+  .export-button, .add-button {
     justify-content: center;
   }
   
