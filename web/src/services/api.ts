@@ -1,9 +1,8 @@
-// API service for Google Sheets integration
+// API service for PostgreSQL integration
 import { environment } from '../config/environment'
 import { ProductCategorizer } from '../utils/categorizer'
 
 const API_BASE_URL = environment.apiBaseUrl
-const USE_MOCK_DATA = environment.useMockData
 
 export interface Product {
   id?: string
@@ -59,31 +58,6 @@ export interface DashboardSummary {
   topProducts: { name: string; quantity: number }[]
 }
 
-// Mock data for development
-const mockProducts: Product[] = [
-  { id: '1', name: 'Smartphone XYZ', category: 'Eletrônicos', cost: 500, unitPrice: 899.90, quantity: 15 },
-  { id: '2', name: 'Camiseta Básica', category: 'Roupas', cost: 15, unitPrice: 29.90, quantity: 45 },
-  { id: '3', name: 'Notebook ABC', category: 'Eletrônicos', cost: 1500, unitPrice: 2499.90, quantity: 8 },
-  { id: '4', name: 'Mesa de Escritório', category: 'Casa', cost: 200, unitPrice: 399.90, quantity: 3 },
-  { id: '5', name: 'Tênis Esportivo', category: 'Roupas', cost: 80, unitPrice: 199.90, quantity: 22 },
-  { id: '6', name: 'Cadeira Gamer', category: 'Casa', cost: 300, unitPrice: 599.90, quantity: 12 }
-]
-
-const mockSales: Sale[] = [
-  { id: '1', dateISO: '2024-01-15T10:30:00Z', product: 'Smartphone XYZ', quantity: 1, totalValue: 899.90, totalCost: 500, profit: 399.90, customerName: 'João Silva', status: 'paid' },
-  { id: '2', dateISO: '2024-01-15T14:20:00Z', product: 'Camiseta Básica', quantity: 2, totalValue: 59.80, totalCost: 30, profit: 29.80, customerName: 'Maria Santos', status: 'paid' },
-  { id: '3', dateISO: '2024-01-14T16:45:00Z', product: 'Notebook ABC', quantity: 1, totalValue: 2499.90, totalCost: 1500, profit: 999.90, customerName: 'Pedro Costa', status: 'paid' },
-  { id: '4', dateISO: '2024-01-14T11:15:00Z', product: 'Tênis Esportivo', quantity: 1, totalValue: 199.90, totalCost: 80, profit: 119.90, customerName: 'Ana Oliveira', status: 'paid' },
-  { id: '5', dateISO: '2024-01-13T09:30:00Z', product: 'Cadeira Gamer', quantity: 1, totalValue: 599.90, totalCost: 300, profit: 299.90, customerName: 'Carlos Lima', status: 'paid' }
-]
-
-const mockCustomers: Customer[] = [
-  { id: '1', name: 'João Silva', phone: '(11) 99999-9999', email: 'joao@email.com', totalPurchases: 12, totalValue: 2500, lastPurchase: '2024-01-15T10:30:00Z' },
-  { id: '2', name: 'Maria Santos', phone: '(11) 88888-8888', email: 'maria@email.com', totalPurchases: 8, totalValue: 1200, lastPurchase: '2024-01-15T14:20:00Z' },
-  { id: '3', name: 'Pedro Costa', phone: '(11) 77777-7777', email: 'pedro@email.com', totalPurchases: 5, totalValue: 3000, lastPurchase: '2024-01-14T16:45:00Z' },
-  { id: '4', name: 'Ana Oliveira', phone: '(11) 66666-6666', email: 'ana@email.com', totalPurchases: 15, totalValue: 1800, lastPurchase: '2024-01-14T11:15:00Z' },
-  { id: '5', name: 'Carlos Lima', phone: '(11) 55555-5555', email: 'carlos@email.com', totalPurchases: 3, totalValue: 800, lastPurchase: '2024-01-13T09:30:00Z' }
-]
 
 class ApiService {
   private async testConnection(): Promise<boolean> {
@@ -108,17 +82,10 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    // Use mock data if configured
-    if (USE_MOCK_DATA) {
-      console.log(`Using mock data for ${endpoint}`)
-      return this.getMockData<T>(endpoint, options)
-    }
-
     // Test connection first
     const isConnected = await this.testConnection()
     if (!isConnected) {
-      console.warn('Netlify functions not available, using mock data')
-      return this.getMockData<T>(endpoint, options)
+      throw new Error('Netlify functions not available. Please check your deployment.')
     }
 
     const url = `${API_BASE_URL}?table=${endpoint}`
@@ -140,11 +107,6 @@ class ApiService {
         const errorText = await response.text()
         console.error(`API Error ${response.status}:`, errorText)
         
-        // If it's a Google Sheets authentication error, fall back to mock data
-        if (errorText.includes('invalid_grant') || errorText.includes('account not found')) {
-          console.warn('Google Sheets authentication failed, falling back to mock data')
-          return this.getMockData<T>(endpoint, options)
-        }
         
         throw new Error(`API Error: ${response.status} ${response.statusText}`)
       }
@@ -194,26 +156,10 @@ class ApiService {
       return data
     } catch (error) {
       console.error(`❌ API request failed for ${endpoint}:`, error)
-      console.warn('Falling back to mock data')
-      return this.getMockData<T>(endpoint, options)
+      throw error
     }
   }
 
-  private async getMockData<T>(endpoint: string, _options: RequestInit = {}): Promise<T> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    switch (endpoint) {
-      case 'products':
-        return mockProducts as T
-      case 'customers':
-        return mockCustomers as T
-      case 'sales':
-        return mockSales as T
-      default:
-        throw new Error(`Unknown endpoint: ${endpoint}`)
-    }
-  }
 
   // Products
   async getProducts(): Promise<Product[]> {

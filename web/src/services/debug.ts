@@ -1,14 +1,13 @@
-// Debug service to test API connection
+// Debug service to test PostgreSQL API connection
 import { environment } from '../config/environment'
 
 export const debugApi = {
   async testConnection() {
     try {
-      console.log('🔍 Testing API connection...')
+      console.log('🔍 Testing PostgreSQL API connection...')
       console.log('Environment:', {
         isDev: environment.isDevelopment,
         isProd: environment.isProduction,
-        useMockData: environment.useMockData,
         apiBaseUrl: environment.apiBaseUrl
       })
 
@@ -22,7 +21,7 @@ export const debugApi = {
       }
 
       // Test products endpoint
-      const productsResponse = await fetch('/.netlify/functions/sheets?table=products')
+      const productsResponse = await fetch('/.netlify/functions/postgres?table=products')
       console.log('Products endpoint response:', productsResponse.status, productsResponse.statusText)
       
       if (productsResponse.ok) {
@@ -41,7 +40,7 @@ export const debugApi = {
       }
 
       // Test customers endpoint
-      const customersResponse = await fetch('/.netlify/functions/sheets?table=customers')
+      const customersResponse = await fetch('/.netlify/functions/postgres?table=customers')
       console.log('Customers endpoint response:', customersResponse.status, customersResponse.statusText)
       
       if (customersResponse.ok) {
@@ -68,7 +67,7 @@ export const debugApi = {
         address: 'Test Address'
       }
 
-      const response = await fetch('/.netlify/functions/sheets?table=customers', {
+      const response = await fetch('/.netlify/functions/postgres?table=customers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
