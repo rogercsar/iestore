@@ -5,6 +5,8 @@
         <h1 class="campaigns-title">Campanhas</h1>
         <p class="campaigns-subtitle">Agrupe promoções e defina o público e o canal</p>
       </div>
+    </div>
+    <div class="header-actions">
       <button class="add-button" @click="openCreate()">
         <span class="add-icon">➕</span>
         <span class="add-text">Nova Campanha</span>
@@ -23,7 +25,7 @@
       </div>
     </div>
 
-    <div class="campaigns-list" v-if="campaigns.length">
+    <div class="campaigns-list" v-if="filteredCampaigns.length">
       <div class="campaign-card" v-for="c in paginatedCampaigns" :key="c.id">
         <div class="card-header">
           <div>
@@ -315,6 +317,8 @@ const exportCSV = () => {
 <style scoped>
 .campaigns-container { flex:1; background:linear-gradient(135deg,#f8fafc,#e2e8f0); padding:1.5rem; min-height:100vh; box-sizing: border-box; }
 .campaigns-header { display:flex; justify-content:space-between; align-items:center; padding:2rem; background:linear-gradient(145deg,#fff,#f8fafc); border-radius:16px; border:1px solid rgba(226,232,240,.8); margin-bottom:2rem; position:relative; overflow:hidden; }
+.header-actions { display:flex; justify-content:flex-end; margin-top:-1rem; margin-bottom:1.5rem; }
+.header-actions .add-button { margin-left:auto; }
 .campaigns-header::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#8b5cf6,#7c3aed); }
 .campaigns-title { font-size:2rem; font-weight:800; color:#1e293b; margin-bottom:.5rem; background:linear-gradient(135deg,#1e293b,#475569); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .campaigns-subtitle { color:#64748b; }
@@ -351,6 +355,8 @@ const exportCSV = () => {
   .campaign-card { padding:.75rem; }
   .campaign-actions { flex-wrap: wrap; }
   .campaign-actions .btn.small { flex:1 1 48%; }
+  .header-actions { margin-top:.5rem; }
+  .header-actions .add-button { width:100%; justify-content:center; }
 }
 .modal-title { font-weight:800; color:#1e293b; margin-bottom:1rem; }
 .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }

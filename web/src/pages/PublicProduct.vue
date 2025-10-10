@@ -45,9 +45,12 @@
           <div class="product-info-section">
             <div class="product-header">
               <h1 class="product-title">{{ product.name }}</h1>
-              <div class="stock-indicator" :class="stockClass">
+              <div class="badges-row">
+                <div v-if="activePromotion" class="promo-badge">Em promoção</div>
+                <div class="stock-indicator" :class="stockClass">
                 <span class="stock-icon">{{ stockIcon }}</span>
                 <span class="stock-text">{{ stockText }}</span>
+                </div>
               </div>
             </div>
 
@@ -234,7 +237,11 @@ const loadProduct = async () => {
         const match = promotions.value.find(p => {
           const start = new Date(p.startAt).getTime()
           const end = new Date(p.endAt).getTime()
-          const includes = p.products?.some(pp => pp.productId === product.value!.id || (pp.name && pp.name.toLowerCase() === product.value!.name.toLowerCase()))
+          const includes = p.products?.some(pp => {
+            const pidOk = !!pp.productId && pp.productId === product.value!.id
+            const nameFallback = !pp.productId && pp.name && pp.name.toLowerCase() === product.value!.name.toLowerCase()
+            return pidOk || nameFallback
+          })
           return includes && start <= now && now <= end
         }) || null
         activePromotion.value = match
@@ -469,6 +476,21 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.badges-row {
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+}
+
+.promo-badge {
+  background: linear-gradient(135deg,#10b981,#059669);
+  color:#fff;
+  font-weight:700;
+  font-size:.875rem;
+  padding:.25rem .75rem;
+  border-radius:999px;
 }
 
 .product-title {
