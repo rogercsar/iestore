@@ -218,6 +218,12 @@ const filteredCustomers = computed(() => {
   
   let filtered = customers.value || []
   console.log('🔍 Initial filtered customers:', filtered.length)
+  
+  // Debug: Check customer structure
+  if (filtered.length > 0) {
+    console.log('🔍 First customer structure:', filtered[0])
+    console.log('🔍 Customer status values:', filtered.map(c => ({ name: c.name, status: c.status })))
+  }
 
   if (searchQuery.value) {
     filtered = filtered.filter(customer =>
@@ -229,7 +235,12 @@ const filteredCustomers = computed(() => {
   }
 
   if (statusFilter.value) {
-    filtered = filtered.filter(customer => (customer.status || 'active') === statusFilter.value)
+    console.log('🔍 Status filter active:', statusFilter.value)
+    filtered = filtered.filter(customer => {
+      const customerStatus = customer.status || 'active'
+      console.log(`🔍 Customer ${customer.name} status: ${customerStatus}, filter: ${statusFilter.value}`)
+      return customerStatus === statusFilter.value
+    })
     console.log('🔍 After status filter:', filtered.length)
   }
 
@@ -252,6 +263,7 @@ const filteredCustomers = computed(() => {
   })
 
   console.log('✅ Final filtered customers:', filtered.length)
+  console.log('✅ Final customer names:', filtered.map(c => c.name))
   return filtered
 })
 

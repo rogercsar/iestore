@@ -173,7 +173,7 @@ const loadProduct = async () => {
     
     // Get product name from route params
     const productName = route.params.name as string
-    console.log('Loading product:', productName)
+    console.log('🔍 Loading product:', productName)
     
     if (!productName) {
       throw new Error('Nome do produto não fornecido')
@@ -181,17 +181,20 @@ const loadProduct = async () => {
 
     // Decode the product name (convert from URL format back to original)
     const decodedName = decodeURIComponent(productName.replace(/-/g, ' '))
-    console.log('Decoded product name:', decodedName)
+    console.log('🔍 Decoded product name:', decodedName)
 
     // Fetch products from API
-    const response = await fetch('/.netlify/functions/sheets?table=products')
+    console.log('🌐 Fetching products from PostgreSQL API...')
+    const response = await fetch('/.netlify/functions/postgres?table=products')
     
     if (!response.ok) {
+      console.error('❌ API Error:', response.status, response.statusText)
       throw new Error('Erro ao carregar produtos')
     }
 
     const products: Product[] = await response.json()
-    console.log('Products loaded:', products)
+    console.log('✅ Products loaded from PostgreSQL:', products.length, 'products')
+    console.log('📦 Product names:', products.map(p => p.name))
 
     // Find the product by name (case insensitive)
     const foundProduct = products.find(p => 
@@ -207,14 +210,16 @@ const loadProduct = async () => {
         unitPrice: parseFloat(foundProduct.unitPrice.toString()) || 0,
         category: foundProduct.category || 'Outros'
       }
-      console.log('Product found:', product.value)
+      console.log('✅ Product found and processed:', product.value)
     } else {
-      console.log('Product not found. Available products:', products.map(p => p.name))
+      console.log('❌ Product not found. Available products:', products.map(p => p.name))
+      console.log('🔍 Looking for:', decodedName)
+      console.log('🔍 Available:', products.map(p => p.name))
       product.value = null
     }
 
   } catch (error) {
-    console.error('Error loading product:', error)
+    console.error('❌ Error loading product:', error)
     product.value = null
   } finally {
     loading.value = false

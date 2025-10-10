@@ -471,21 +471,28 @@
                 console.log('Loading product:', decodedName);
 
                 // Buscar produtos da API
-                const response = await fetch('/.netlify/functions/sheets?table=products');
+                console.log('🌐 Fetching products from PostgreSQL API...');
+                const response = await fetch('/.netlify/functions/postgres?table=products');
                 
                 if (!response.ok) {
+                    console.error('❌ API Error:', response.status, response.statusText);
                     throw new Error('Erro ao carregar produtos');
                 }
 
                 const products = await response.json();
-                console.log('Products loaded:', products);
+                console.log('✅ Products loaded from PostgreSQL:', products.length, 'products');
+                console.log('📦 Product names:', products.map(p => p.name));
 
                 // Encontrar produto por nome
+                console.log('🔍 Looking for product:', decodedName);
                 const product = products.find(p => 
                     p.name.toLowerCase() === decodedName.toLowerCase()
                 );
 
                 if (!product) {
+                    console.log('❌ Product not found. Available products:', products.map(p => p.name));
+                    console.log('🔍 Looking for:', decodedName);
+                    console.log('🔍 Available:', products.map(p => p.name));
                     throw new Error('Produto não encontrado');
                 }
 
