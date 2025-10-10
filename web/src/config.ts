@@ -1,8 +1,8 @@
 // Configuration for the application
 export const config = {
   // API Configuration
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '/.netlify/functions/sheets',
-  useMockData: import.meta.env.VITE_USE_MOCK_DATA === 'true' || false, // Default to real API
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '/.netlify/functions/postgres',
+  useMockData: false, // Always use real data
   
   // App Configuration
   appName: 'i e store',
@@ -12,7 +12,7 @@ export const config = {
   features: {
     enableAnimations: true,
     enableMockData: false, // Disabled to use real data
-    enableGoogleSheets: true, // Enabled to use real Google Sheets
+    enablePostgreSQL: true, // Enabled to use real PostgreSQL database
   }
 }
 

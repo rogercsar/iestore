@@ -103,9 +103,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAppStore } from '../stores/app'
 import Card from '../components/Card.vue'
 
 const router = useRouter()
+const store = useAppStore()
 
 interface Installment {
   id: string
@@ -141,33 +143,37 @@ const monthNames = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
 
-// Mock data for pending payments
-const pendingPayments = ref<PendingPayment[]>([
-  {
-    saleId: '1',
-    customerName: 'João Silva',
-    customerPhone: '+5511999999999',
-    installment: {
-      id: '1',
-      number: 2,
-      value: 150,
-      dueDate: '2024-01-20T00:00:00Z',
-      status: 'pending'
-    }
-  },
-  {
-    saleId: '2',
-    customerName: 'Maria Santos',
-    customerPhone: '+5511888888888',
-    installment: {
-      id: '2',
-      number: 1,
-      value: 200,
-      dueDate: '2024-01-25T00:00:00Z',
-      status: 'pending'
-    }
+// Load real pending payments from sales with installments
+const pendingPayments = ref<PendingPayment[]>([])
+
+const loadPendingPayments = async () => {
+  try {
+    await store.fetchSales()
+    
+    const sales = store.sales || []
+    const pendingList: PendingPayment[] = []
+    
+    // Check each sale for pending installments
+    sales.forEach(sale => {
+      if (sale.installments && sale.installments.length > 0) {
+        sale.installments.forEach(installment => {
+          if (installment.status === 'pending' || installment.status === 'overdue') {
+            pendingList.push({
+              saleId: sale.id || '',
+              customerName: sale.customerName || 'Cliente',
+              customerPhone: sale.customerPhone || '',
+              installment: installment
+            })
+          }
+        })
+      }
+    })
+    
+    pendingPayments.value = pendingList
+  } catch (error) {
+    console.error('Error loading pending payments:', error)
   }
-])
+}
 
 const goBack = () => {
   router.go(-1)
@@ -295,7 +301,7 @@ const markAsPaid = (payment: PendingPayment) => {
 }
 
 onMounted(() => {
-  // Load pending payments
+  loadPendingPayments()
 })
 </script>
 

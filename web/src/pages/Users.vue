@@ -148,9 +148,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAppStore } from '../stores/app'
 import Card from '../components/Card.vue'
 
 const router = useRouter()
+const store = useAppStore()
 
 interface User {
   id: string
@@ -177,33 +179,9 @@ const goBack = () => {
 const loadUsers = async () => {
   loading.value = true
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Mock users data
-    users.value = [
-      {
-        id: '1',
-        name: 'Admin',
-        email: 'admin@iestore.com',
-        role: 'admin',
-        status: 'active'
-      },
-      {
-        id: '2',
-        name: 'João Silva',
-        email: 'joao@iestore.com',
-        role: 'user',
-        status: 'active'
-      },
-      {
-        id: '3',
-        name: 'Maria Santos',
-        email: 'maria@iestore.com',
-        role: 'user',
-        status: 'inactive'
-      }
-    ]
+    // Load real customers data from store
+    await store.fetchCustomers()
+    users.value = store.customers || []
   } catch (error) {
     console.error('Error loading users:', error)
   } finally {

@@ -58,11 +58,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAppStore } from '../stores/app'
 import Card from '../components/Card.vue'
 import SaleDetailsModal from '../components/SaleDetailsModal.vue'
 import type { Sale, MultiSale } from '../services/api'
 
 const router = useRouter()
+const store = useAppStore()
 
 const sales = ref<(Sale | MultiSale)[]>([])
 const loading = ref(false)
@@ -97,84 +99,9 @@ const formatDate = (dateString: string) => {
 const loadSales = async () => {
   loading.value = true
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Mock sales data
-    sales.value = [
-      {
-        id: '1',
-        product: 'Produto A',
-        quantity: 2,
-        unitPrice: 50,
-        totalValue: 100,
-        totalCost: 60,
-        profit: 40,
-        dateISO: '2024-01-15T10:00:00Z',
-        customerName: 'João Silva',
-        customerPhone: '+5511999999999',
-        paymentMethod: 'Dinheiro',
-        status: 'paid'
-      },
-      {
-        id: '2',
-        product: 'Produto B',
-        quantity: 1,
-        unitPrice: 80,
-        totalValue: 80,
-        totalCost: 50,
-        profit: 30,
-        dateISO: '2024-01-14T14:30:00Z',
-        customerName: 'Maria Santos',
-        customerPhone: '+5511888888888',
-        paymentMethod: 'Cartão',
-        status: 'paid'
-      },
-      {
-        id: '3',
-        items: [
-          {
-            product: 'Produto C',
-            quantity: 1,
-            unitPrice: 30,
-            totalValue: 30,
-            totalCost: 20
-          },
-          {
-            product: 'Produto D',
-            quantity: 2,
-            unitPrice: 25,
-            totalValue: 50,
-            totalCost: 30
-          }
-        ],
-        totalValue: 80,
-        totalCost: 50,
-        totalProfit: 30,
-        dateISO: '2024-01-13T09:15:00Z',
-        customerName: 'Pedro Oliveira',
-        customerPhone: '+5511777777777',
-        paymentMethod: 'Parcelado',
-        status: 'partial',
-        installments: [
-          {
-            id: '1',
-            number: 1,
-            value: 40,
-            dueDate: '2024-01-20T00:00:00Z',
-            status: 'paid',
-            paidDate: '2024-01-18T00:00:00Z'
-          },
-          {
-            id: '2',
-            number: 2,
-            value: 40,
-            dueDate: '2024-02-20T00:00:00Z',
-            status: 'pending'
-          }
-        ]
-      }
-    ]
+    // Load real sales data from store
+    await store.fetchSales()
+    sales.value = store.sales || []
   } catch (error) {
     console.error('Error loading sales:', error)
   } finally {

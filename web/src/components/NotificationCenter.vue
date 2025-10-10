@@ -53,6 +53,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useAppStore } from '../stores/app'
+
+const store = useAppStore()
 
 interface NotificationItem {
   sale: any
@@ -87,31 +90,40 @@ const onClose = () => {
 const notifications = ref<NotificationItem[]>([])
 const loading = ref(false)
 
-// Mock data for now - in real app this would come from API
+// Load real notifications from sales with installments
 const loadNotifications = async () => {
   loading.value = true
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Load real sales data to check for pending installments
+    await store.fetchSales()
     
-    // Mock notifications
-    notifications.value = [
-      {
-        sale: {},
-        installment: {
-          id: '1-2',
-          number: 2,
-          value: 50,
-          dueDate: '2024-02-15T00:00:00Z',
-          status: 'pending'
-        },
-        customerName: 'João Silva',
-        productName: 'Produto A',
-        totalInstallments: 2,
-        daysUntilDue: 5,
-        type: 'upcoming'
+    const sales = store.sales || []
+    const notificationList: NotificationItem[] = []
+    
+    // Check each sale for pending installments
+    sales.forEach(sale => {
+      if (sale.installments && sale.installments.length > 0) {
+        sale.installments.forEach(installment => {
+          if (installment.status === 'pending' || installment.status === 'overdue') {
+            const dueDate = new Date(installment.dueDate)
+            const today = new Date()
+            const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+            
+            notificationList.push({
+              sale: sale,
+              installment: installment,
+              customerName: sale.customerName || 'Cliente',
+              productName: sale.product || 'Produto',
+              totalInstallments: sale.installments.length,
+              daysUntilDue: daysUntilDue,
+              type: daysUntilDue <= 0 ? 'overdue' : daysUntilDue <= 3 ? 'urgent' : 'upcoming'
+            })
+          }
+        })
       }
-    ]
+    })
+    
+    notifications.value = notificationList
   } catch (error) {
     console.error('Error loading notifications:', error)
   } finally {
