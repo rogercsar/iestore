@@ -257,6 +257,7 @@ onMounted(() => {
 
 .page-header {
   margin-bottom: 2rem;
+  margin-top: 2rem; /* Espaço adicional para o botão de voltar */
 }
 
 .header-content {
