@@ -380,6 +380,13 @@ onMounted(async () => {
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }
   .promotions-header { padding: 1rem; }
+  .promotions-title { font-size:1.5rem; }
+  .filters-row { flex-direction: column; }
+  .filter-input { min-width: 0; width: 100%; }
+  .promotions-list { grid-template-columns: 1fr; }
+  .promotion-card { padding:.75rem; }
+  .promo-actions { flex-wrap: wrap; justify-content: stretch; }
+  .promo-actions .btn.small { flex:1 1 48%; }
 }
 .form-field { display:flex; flex-direction:column; gap:.25rem; }
 .form-field.full { grid-column:1 / -1; }

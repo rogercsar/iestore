@@ -345,6 +345,12 @@ const exportCSV = () => {
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }
   .campaigns-header { padding: 1rem; }
+  .campaigns-title { font-size:1.5rem; }
+  .filters-row { flex-direction: column; align-items: stretch; }
+  .campaigns-list { grid-template-columns: 1fr; }
+  .campaign-card { padding:.75rem; }
+  .campaign-actions { flex-wrap: wrap; }
+  .campaign-actions .btn.small { flex:1 1 48%; }
 }
 .modal-title { font-weight:800; color:#1e293b; margin-bottom:1rem; }
 .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
