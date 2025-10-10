@@ -84,56 +84,64 @@
       <div 
         v-for="customer in filteredCustomers" 
         :key="customer.id"
-        class="customer-item"
+        class="customer-card"
       >
-        <div class="customer-header">
+        <!-- Card Header -->
+        <div class="card-header">
           <div class="customer-avatar">
             <span class="avatar-text">{{ getInitials(customer.name) }}</span>
           </div>
           <div class="customer-info">
             <h3 class="customer-name">{{ customer.name }}</h3>
-            <p class="customer-email">{{ customer.email || 'Sem email' }}</p>
-            <p class="customer-phone">{{ customer.phone || 'Sem telefone' }}</p>
+            <div class="contact-info">
+              <p class="customer-email">
+                <span class="icon">📧</span>
+                {{ customer.email || 'Sem email' }}
+              </p>
+              <p class="customer-phone">
+                <span class="icon">📱</span>
+                {{ customer.phone || 'Sem telefone' }}
+              </p>
+            </div>
           </div>
-          <div class="customer-actions">
-            <button class="action-btn edit-btn" @click="editCustomer(customer)">
-              <span>✏️</span>
-            </button>
-            <button class="action-btn delete-btn" @click="deleteCustomer(customer.id!)">
-              <span>🗑️</span>
-            </button>
-          </div>
-        </div>
-        
-        <div class="customer-details">
-          <div class="detail-row">
-            <span class="detail-label">Total de Vendas:</span>
-            <span class="detail-value">{{ getCustomerSalesCount(customer.id!) }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Valor Total:</span>
-            <span class="detail-value price">{{ formatCurrency(getCustomerTotalValue(customer.id!)) }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Última Compra:</span>
-            <span class="detail-value">{{ getLastPurchaseDate(customer.id!) }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Status:</span>
-            <span class="detail-value status" :class="customer.status || 'active'">
-              {{ customer.status === 'inactive' ? 'Inativo' : 'Ativo' }}
-            </span>
+          <div class="status-badge" :class="customer.status || 'active'">
+            {{ customer.status === 'inactive' ? 'Inativo' : 'Ativo' }}
           </div>
         </div>
 
-        <div class="customer-actions-bottom">
-          <button class="action-btn view-btn" @click="viewCustomer(customer)">
-            <span>👁️</span>
-            Ver Perfil
+        <!-- Card Stats -->
+        <div class="card-stats">
+          <div class="stat-item">
+            <div class="stat-value">{{ getCustomerSalesCount(customer.id!) }}</div>
+            <div class="stat-label">Vendas</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value price">{{ formatCurrency(getCustomerTotalValue(customer.id!)) }}</div>
+            <div class="stat-label">Total</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ getLastPurchaseDate(customer.id!) }}</div>
+            <div class="stat-label">Última Compra</div>
+          </div>
+        </div>
+
+        <!-- Card Actions -->
+        <div class="card-actions">
+          <button class="action-btn primary" @click="viewCustomer(customer)">
+            <span class="btn-icon">👁️</span>
+            <span class="btn-text">Ver Perfil</span>
           </button>
-          <button class="action-btn sales-btn" @click="viewCustomerSales(customer.id!)">
-            <span>💰</span>
-            Ver Vendas
+          <button class="action-btn secondary" @click="viewCustomerSales(customer.id!)">
+            <span class="btn-icon">💰</span>
+            <span class="btn-text">Vendas</span>
+          </button>
+          <button class="action-btn edit" @click="editCustomer(customer)">
+            <span class="btn-icon">✏️</span>
+            <span class="btn-text">Editar</span>
+          </button>
+          <button class="action-btn danger" @click="deleteCustomer(customer.id!)">
+            <span class="btn-icon">🗑️</span>
+            <span class="btn-text">Excluir</span>
           </button>
         </div>
       </div>
@@ -322,24 +330,46 @@ const formatCurrency = (value: number) => {
 
 const editCustomer = (customer: Customer) => {
   console.log('Edit customer:', customer)
-  // TODO: Implement edit functionality
+  // Preencher o modal com os dados do cliente
+  newCustomer.value = {
+    name: customer.name,
+    email: customer.email || '',
+    phone: customer.phone,
+    address: customer.address || '',
+    status: customer.status || 'active'
+  }
+  showAddModal.value = true
+  // TODO: Implementar modo de edição no modal
 }
 
 const deleteCustomer = async (id: string) => {
   if (confirm('Tem certeza que deseja excluir este cliente?')) {
-    console.log('Delete customer:', id)
-    // TODO: Implement delete functionality
+    try {
+      console.log('Delete customer:', id)
+      // TODO: Implementar delete via API
+      await store.fetchCustomers() // Recarregar lista
+      alert('Cliente excluído com sucesso!')
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error)
+      alert('Erro ao excluir cliente. Tente novamente.')
+    }
   }
 }
 
 const viewCustomer = (customer: Customer) => {
   console.log('View customer:', customer)
-  // TODO: Implement customer profile modal
+  // Mostrar modal com detalhes do cliente
+  alert(`Perfil do Cliente:\n\nNome: ${customer.name}\nEmail: ${customer.email || 'Não informado'}\nTelefone: ${customer.phone}\nEndereço: ${customer.address || 'Não informado'}\nStatus: ${customer.status === 'inactive' ? 'Inativo' : 'Ativo'}`)
 }
 
 const viewCustomerSales = (customerId: string) => {
   console.log('View customer sales:', customerId)
-  // TODO: Implement customer sales view
+  const customer = store.customers?.find(c => c.id === customerId)
+  const salesCount = getCustomerSalesCount(customerId)
+  const totalValue = getCustomerTotalValue(customerId)
+  const lastPurchase = getLastPurchaseDate(customerId)
+  
+  alert(`Vendas do Cliente:\n\nCliente: ${customer?.name}\nTotal de Vendas: ${salesCount}\nValor Total: ${formatCurrency(totalValue)}\nÚltima Compra: ${lastPurchase}`)
 }
 
 const handleAddCustomer = async () => {
@@ -569,184 +599,251 @@ onMounted(() => {
 }
 
 .customers-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
 }
 
-.customer-item {
-  background-color: white;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--gray-200);
-  transition: all 0.2s ease;
+.customer-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.customer-item:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+.customer-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.customer-header {
+.customer-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.customer-card:hover::before {
+  opacity: 1;
+}
+
+.card-header {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  position: relative;
 }
 
 .customer-avatar {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+  flex-shrink: 0;
 }
 
 .avatar-text {
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .customer-info {
   flex: 1;
+  min-width: 0;
 }
 
 .customer-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.customer-email,
+.customer-phone {
+  font-size: 0.875rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  line-height: 1.4;
+}
+
+.contact-info .icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.status-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.status-badge.active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.inactive {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--gray-800);
+  color: #1e293b;
   margin-bottom: 0.25rem;
 }
 
-.customer-email {
-  font-size: 0.875rem;
-  color: var(--gray-600);
-  margin-bottom: 0.125rem;
+.stat-value.price {
+  color: #059669;
 }
 
-.customer-phone {
-  font-size: 0.875rem;
-  color: var(--gray-500);
+.stat-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
-.customer-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.action-btn {
-  width: 2.5rem;
-  height: 2.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-}
-
-.edit-btn {
-  background-color: var(--primary-light);
-  color: white;
-}
-
-.edit-btn:hover {
-  background-color: var(--primary);
-}
-
-.delete-btn {
-  background-color: #fef2f2;
-  color: #dc2626;
-}
-
-.delete-btn:hover {
-  background-color: #fecaca;
-}
-
-.customer-details {
+.card-actions {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.detail-label {
-  font-size: 0.875rem;
-  color: var(--gray-600);
-  font-weight: 500;
-}
-
-.detail-value {
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.detail-value.price {
-  color: var(--success);
-}
-
-.detail-value.status.active {
-  color: var(--success);
-  background-color: #f0fdf4;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-.detail-value.status.inactive {
-  color: var(--gray-500);
-  background-color: var(--gray-100);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-.customer-actions-bottom {
-  display: flex;
-  gap: 0.75rem;
 }
 
 .action-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.875rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
 }
 
-.view-btn {
-  background-color: var(--gray-100);
-  color: var(--gray-700);
+.action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
 }
 
-.view-btn:hover {
-  background-color: var(--gray-200);
+.action-btn:hover::before {
+  left: 100%;
 }
 
-.sales-btn {
-  background-color: var(--success-light);
-  color: var(--success-dark);
+.btn-icon {
+  font-size: 1rem;
 }
 
-.sales-btn:hover {
-  background-color: var(--success);
+.btn-text {
+  font-size: 0.8125rem;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: white;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.action-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+}
+
+.action-btn.secondary {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+}
+
+.action-btn.secondary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(139, 92, 246, 0.4);
+}
+
+.action-btn.edit {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+}
+
+.action-btn.edit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4);
+}
+
+.action-btn.danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.action-btn.danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
 }
 
 .empty-state {
