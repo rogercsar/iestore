@@ -145,8 +145,8 @@ async function handleCustomers(event: any, client: any, headers: any, action: st
       SELECT 
         id, name, phone, email, address, total_purchases as "totalPurchases",
         total_value as "totalValue", pending_amount as "pendingAmount",
-        last_purchase as "lastPurchase", notes, 
-        COALESCE(status, 'active') as status
+        last_purchase as "lastPurchase", notes,
+        'active' as status
       FROM customers 
       ORDER BY name
     `);

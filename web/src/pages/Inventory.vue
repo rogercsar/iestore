@@ -154,6 +154,27 @@
             <label class="form-label">Quantidade em Estoque</label>
             <input type="number" class="form-input" v-model="newProduct.quantity" required>
           </div>
+          
+          <!-- Image Upload Section -->
+          <div class="form-group">
+            <label class="form-label">Imagem do Produto</label>
+            <div class="image-upload-container">
+              <div v-if="newProduct.photo" class="image-preview">
+                <img :src="newProduct.photo" :alt="newProduct.name" class="preview-image" />
+                <button type="button" class="remove-image-btn" @click="removeNewProductImage">
+                  <span class="remove-icon">×</span>
+                </button>
+              </div>
+              <div v-else class="image-upload-placeholder">
+                <span class="upload-icon">📷</span>
+                <p class="upload-text">Nenhuma imagem selecionada</p>
+                <button type="button" class="upload-btn" @click="showImageUploadOptions">
+                  Selecionar Imagem
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <div class="modal-actions">
             <button type="button" class="btn btn-secondary" @click="showAddModal = false">Cancelar</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">
@@ -199,7 +220,8 @@ const newProduct = ref({
   category: '',
   cost: 0,
   unitPrice: 0,
-  quantity: 0
+  quantity: 0,
+  photo: ''
 })
 
 const availableCategories = computed(() => {
@@ -287,13 +309,26 @@ const handleAddProduct = async () => {
       category: '',
       cost: 0,
       unitPrice: 0,
-      quantity: 0
+      quantity: 0,
+      photo: ''
     }
     // Refresh products after creating
     await store.fetchProducts()
   } catch (error) {
     console.error('Erro ao criar produto:', error)
   }
+}
+
+// Image upload functions
+const showImageUploadOptions = () => {
+  // In a real app, this would show image picker options
+  alert('Funcionalidade de seleção de imagem será implementada')
+  // For now, add a placeholder image
+  newProduct.value.photo = 'https://via.placeholder.com/200x200?text=Produto+Novo'
+}
+
+const removeNewProductImage = () => {
+  newProduct.value.photo = ''
 }
 
 const editProduct = (product: Product) => {
