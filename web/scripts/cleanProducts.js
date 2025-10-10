@@ -13,32 +13,8 @@ async function cleanAndReplaceProducts() {
     const existingProducts = await getResponse.json();
     console.log(`📦 Encontrados ${existingProducts.length} produtos existentes`);
     
-    // 2. Excluir todos os produtos existentes
-    console.log('🗑️ Excluindo produtos existentes...');
-    for (const product of existingProducts) {
-      try {
-        const deleteResponse = await fetch(`${API_BASE}?table=products`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete', id: product.id })
-        });
-        
-        if (deleteResponse.ok) {
-          console.log(`✅ Produto excluído: ${product.name}`);
-        } else {
-          console.log(`❌ Erro ao excluir: ${product.name}`);
-        }
-      } catch (error) {
-        console.log(`❌ Erro ao excluir ${product.name}:`, error.message);
-      }
-    }
-    
-    // 3. Aguardar um pouco
-    console.log('⏳ Aguardando processamento...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // 4. Adicionar os 23 produtos reais
-    console.log('🔄 Adicionando produtos reais...');
+    // 2. Usar operação overwrite para substituir todos os produtos
+    console.log('🔄 Substituindo todos os produtos pelos 23 produtos reais...');
     const realProducts = [
       {
         name: "Copo café Stanley",
@@ -226,34 +202,28 @@ async function cleanAndReplaceProducts() {
       }
     ];
     
-    let successCount = 0;
-    let errorCount = 0;
-    
-    for (const product of realProducts) {
-      try {
-        const addResponse = await fetch(`${API_BASE}?table=products`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'append', data: [product] })
-        });
-        
-        if (addResponse.ok) {
-          console.log(`✅ Produto adicionado: ${product.name}`);
-          successCount++;
-        } else {
-          console.log(`❌ Erro ao adicionar: ${product.name}`);
-          errorCount++;
-        }
-      } catch (error) {
-        console.log(`❌ Erro ao adicionar ${product.name}:`, error.message);
-        errorCount++;
+    // Usar operação overwrite para substituir todos os produtos de uma vez
+    try {
+      const replaceResponse = await fetch(`${API_BASE}?table=products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'overwrite', rows: realProducts })
+      });
+      
+      if (replaceResponse.ok) {
+        console.log(`✅ Todos os ${realProducts.length} produtos substituídos com sucesso!`);
+        console.log('📦 Produtos antigos removidos e novos produtos adicionados');
+      } else {
+        console.log(`❌ Erro ao substituir produtos: ${replaceResponse.status}`);
+        const errorText = await replaceResponse.text();
+        console.log('Detalhes do erro:', errorText);
       }
+    } catch (error) {
+      console.log(`❌ Erro ao substituir produtos:`, error.message);
     }
     
     console.log(`\n🎉 Processo concluído!`);
-    console.log(`✅ ${successCount} produtos adicionados com sucesso`);
-    console.log(`❌ ${errorCount} produtos falharam`);
-    console.log(`📦 Total esperado: 23 produtos`);
+    console.log(`📦 Total de produtos: 23 produtos reais`);
     
   } catch (error) {
     console.error('❌ Erro geral:', error.message);
