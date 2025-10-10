@@ -137,7 +137,7 @@ import { useAlert } from '../composables/useAlert'
 const route = useRoute()
 const router = useRouter()
 const store = useAppStore()
-const { success, error, confirm } = useAlert()
+const { success, error: showError, confirm } = useAlert()
 
 const loading = ref(true)
 const error = ref('')
@@ -213,7 +213,7 @@ const deleteCustomer = async () => {
       )
       router.push('/customers')
     } catch (err) {
-      await error(
+      await showError(
         'Erro ao Excluir',
         'Não foi possível excluir o cliente.',
         err.message
