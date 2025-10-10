@@ -376,36 +376,38 @@ const viewCustomerDetails = (customer: Customer) => {
   router.push(`/customer/${customer.id}`)
 }
 
-const viewCustomer = (customer: Customer) => {
+const viewCustomer = async (customer: Customer) => {
   console.log('View customer:', customer)
   // Mostrar modal com detalhes do cliente
-  alert(`Perfil do Cliente:\n\nNome: ${customer.name}\nEmail: ${customer.email || 'Não informado'}\nTelefone: ${customer.phone}\nEndereço: ${customer.address || 'Não informado'}\nStatus: ${customer.status === 'inactive' ? 'Inativo' : 'Ativo'}`)
+  const details = `Nome: ${customer.name}\nEmail: ${customer.email || 'Não informado'}\nTelefone: ${customer.phone}\nEndereço: ${customer.address || 'Não informado'}\nStatus: ${customer.status === 'inactive' ? 'Inativo' : 'Ativo'}`
+  await info('Perfil do Cliente', 'Informações do cliente:', details)
 }
 
-const viewCustomerSales = (customerId: string) => {
+const viewCustomerSales = async (customerId: string) => {
   console.log('View customer sales:', customerId)
   const customer = store.customers?.find(c => c.id === customerId)
   const salesCount = getCustomerSalesCount(customerId)
   const totalValue = getCustomerTotalValue(customerId)
   const lastPurchase = getLastPurchaseDate(customerId)
   
-  alert(`Vendas do Cliente:\n\nCliente: ${customer?.name}\nTotal de Vendas: ${salesCount}\nValor Total: ${formatCurrency(totalValue)}\nÚltima Compra: ${lastPurchase}`)
+  const details = `Cliente: ${customer?.name}\nTotal de Vendas: ${salesCount}\nValor Total: ${formatCurrency(totalValue)}\nÚltima Compra: ${lastPurchase}`
+  await info('Vendas do Cliente', 'Histórico de vendas:', details)
 }
 
 const handleAddCustomer = async () => {
   // Validação dos campos obrigatórios
   if (!newCustomer.value.name.trim()) {
-    alert('Nome é obrigatório')
+    await error('Campo Obrigatório', 'Nome é obrigatório')
     return
   }
   
   if (!newCustomer.value.email.trim()) {
-    alert('Email é obrigatório')
+    await error('Campo Obrigatório', 'Email é obrigatório')
     return
   }
   
   if (!newCustomer.value.phone.trim()) {
-    alert('Telefone é obrigatório')
+    await error('Campo Obrigatório', 'Telefone é obrigatório')
     return
   }
 
@@ -422,10 +424,10 @@ const handleAddCustomer = async () => {
     }
     // Refresh customers after creating
     await store.fetchCustomers()
-    alert('Cliente criado com sucesso!')
-  } catch (error) {
-    console.error('Erro ao criar cliente:', error)
-    alert('Erro ao criar cliente. Tente novamente.')
+    await success('Cliente Criado', 'Cliente criado com sucesso!')
+  } catch (err) {
+    console.error('Erro ao criar cliente:', err)
+    await error('Erro ao Criar Cliente', 'Não foi possível criar o cliente. Tente novamente.')
   }
 }
 

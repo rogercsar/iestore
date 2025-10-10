@@ -107,9 +107,11 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AlertModal from './components/AlertModal.vue'
 import { useAlert } from './composables/useAlert'
+import { useAppStore } from './stores/app'
 
 const router = useRouter()
 const { alertState, closeAlert } = useAlert()
+const store = useAppStore()
 
 const sidebarOpen = ref(false)
 
@@ -143,8 +145,17 @@ const handleEscape = (e: KeyboardEvent) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('keydown', handleEscape)
+  
+  // Inicializar dados da aplicação na primeira carga
+  try {
+    console.log('🚀 Initializing app data...')
+    await store.initializeData()
+    console.log('✅ App data initialized successfully')
+  } catch (error) {
+    console.error('❌ Error initializing app data:', error)
+  }
 })
 
 onUnmounted(() => {

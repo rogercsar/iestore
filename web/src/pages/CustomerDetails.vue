@@ -276,6 +276,8 @@ onMounted(() => {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s ease;
+  position: relative;
+  z-index: 1001;
 }
 
 .back-btn:hover {

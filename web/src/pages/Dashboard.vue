@@ -295,13 +295,26 @@ const navigateToPendingPayments = () => {
 
 const loadData = async () => {
   try {
-    console.log('🔄 Reloading dashboard data...')
-    await Promise.all([
-      store.fetchCustomers(),
-      store.fetchProducts(),
-      store.fetchSales(),
-      store.fetchDashboardSummary()
-    ])
+    console.log('🔄 Loading dashboard data...')
+    
+    // Só carrega dados se ainda não foram carregados
+    const promises = []
+    if (!store.products || store.products.length === 0) {
+      promises.push(store.fetchProducts())
+    }
+    if (!store.customers || store.customers.length === 0) {
+      promises.push(store.fetchCustomers())
+    }
+    if (!store.sales || store.sales.length === 0) {
+      promises.push(store.fetchSales())
+    }
+    if (!store.dashboardSummary) {
+      promises.push(store.fetchDashboardSummary())
+    }
+    
+    if (promises.length > 0) {
+      await Promise.all(promises)
+    }
     
     console.log('📊 Dashboard data after reload:')
     console.log('Products count:', store.products?.length || 0)
