@@ -124,7 +124,7 @@ class ApiService {
       console.log(`✅ API returned valid data for ${endpoint}:`, data)
       
       // Process data to ensure correct types
-      if (endpoint === 'products') {
+      if (endpoint === 'products' && Array.isArray(data)) {
         return data.map((product: any) => ({
           ...product,
           quantity: parseInt(product.quantity) || 0,
@@ -135,14 +135,14 @@ class ApiService {
         }))
       }
       
-      if (endpoint === 'customers') {
+      if (endpoint === 'customers' && Array.isArray(data)) {
         return data.map((customer: any) => ({
           ...customer,
           id: customer.id || `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         }))
       }
       
-      if (endpoint === 'sales') {
+      if (endpoint === 'sales' && Array.isArray(data)) {
         return data.map((sale: any) => ({
           ...sale,
           quantity: parseInt(sale.quantity) || 0,
