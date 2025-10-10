@@ -212,7 +212,12 @@ const newCustomer = ref({
 })
 
 const filteredCustomers = computed(() => {
+  console.log('🔍 Computing filtered customers...')
+  console.log('📦 Raw customers from store:', customers.value)
+  console.log('📦 Customers length:', customers.value?.length)
+  
   let filtered = customers.value || []
+  console.log('🔍 Initial filtered customers:', filtered.length)
 
   if (searchQuery.value) {
     filtered = filtered.filter(customer =>
@@ -220,10 +225,12 @@ const filteredCustomers = computed(() => {
       customer.email.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       (customer.phone && customer.phone.includes(searchQuery.value))
     )
+    console.log('🔍 After search filter:', filtered.length)
   }
 
   if (statusFilter.value) {
     filtered = filtered.filter(customer => (customer.status || 'active') === statusFilter.value)
+    console.log('🔍 After status filter:', filtered.length)
   }
 
   // Sort customers
@@ -244,6 +251,7 @@ const filteredCustomers = computed(() => {
     }
   })
 
+  console.log('✅ Final filtered customers:', filtered.length)
   return filtered
 })
 
