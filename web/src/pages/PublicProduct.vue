@@ -53,9 +53,19 @@
 
             <!-- Price Section -->
             <div class="price-section">
-              <div class="price-container">
+              <div class="price-container" v-if="activePromotion && product">
+                <span class="price-label">Preço Promocional</span>
+                <div class="promo-price-line">
+                  <span class="original-price">{{ formatCurrency(product.unitPrice) }}</span>
+                  <span class="arrow">→</span>
+                  <span class="discounted-price">{{ formatCurrency(discountPrice(product.unitPrice, activePromotion.discountPercent)) }}</span>
+                  <span class="percent">-{{ activePromotion.discountPercent }}%</span>
+                </div>
+                <span class="price-subtitle">Termina em {{ countdown }}</span>
+              </div>
+              <div class="price-container" v-else>
                 <span class="price-label">Preço</span>
-                <span class="price-value">{{ formatCurrency(product.unitPrice) }}</span>
+                <span class="price-value">{{ formatCurrency(product?.unitPrice || 0) }}</span>
                 <span class="price-subtitle">Preço final</span>
               </div>
             </div>
@@ -115,13 +125,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import type { Product } from '../services/api'
+import { apiService, type Product, type Promotion } from '../services/api'
 
 const route = useRoute()
 const product = ref<Product | null>(null)
 const loading = ref(true)
+const promotions = ref<Promotion[]>([])
+const activePromotion = ref<Promotion | null>(null)
+const countdown = ref<string>('')
+let countdownTimer: number | undefined
 
 // Computed properties
 const stockClass = computed(() => {
@@ -155,7 +169,8 @@ const stockTextClass = computed(() => {
 
 const whatsappUrl = computed(() => {
   if (!product.value) return '#'
-  const message = `Olá! Tenho interesse no produto: *${product.value.name}* - ${formatCurrency(product.value.unitPrice)}`
+  const price = activePromotion.value ? discountPrice(product.value.unitPrice, activePromotion.value.discountPercent) : product.value.unitPrice
+  const message = `Olá! Tenho interesse no produto: *${product.value.name}* - ${formatCurrency(price)}`
   return `https://wa.me/?text=${encodeURIComponent(message)}`
 })
 
@@ -211,6 +226,22 @@ const loadProduct = async () => {
         category: foundProduct.category || 'Outros'
       }
       console.log('✅ Product found and processed:', product.value)
+
+      // Load promotions and compute active promotion for this product
+      try {
+        promotions.value = await apiService.getPromotions()
+        const now = Date.now()
+        const match = promotions.value.find(p => {
+          const start = new Date(p.startAt).getTime()
+          const end = new Date(p.endAt).getTime()
+          const includes = p.products?.some(pp => pp.productId === product.value!.id || (pp.name && pp.name.toLowerCase() === product.value!.name.toLowerCase()))
+          return includes && start <= now && now <= end
+        }) || null
+        activePromotion.value = match
+        if (activePromotion.value) startCountdown()
+      } catch (e) {
+        console.warn('Failed to load promotions for public product:', e)
+      }
     } else {
       console.log('❌ Product not found. Available products:', products.map(p => p.name))
       console.log('🔍 Looking for:', decodedName)
@@ -226,8 +257,34 @@ const loadProduct = async () => {
   }
 }
 
+const discountPrice = (price: number, percent: number) => Math.max(0, +(price * (1 - percent / 100)).toFixed(2))
+
+const startCountdown = () => {
+  if (!activePromotion.value) return
+  const update = () => {
+    const end = new Date(activePromotion.value!.endAt).getTime()
+    const diff = end - Date.now()
+    if (diff <= 0) {
+      countdown.value = 'encerrada'
+      activePromotion.value = null
+      if (countdownTimer) window.clearInterval(countdownTimer)
+      return
+    }
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
+    const minutes = Math.floor((diff / (1000 * 60)) % 60)
+    countdown.value = `${days}d ${hours}h ${minutes}m`
+  }
+  update()
+  countdownTimer = window.setInterval(update, 60000) as unknown as number
+}
+
 onMounted(() => {
   loadProduct()
+})
+
+onUnmounted(() => {
+  if (countdownTimer) window.clearInterval(countdownTimer)
 })
 </script>
 
@@ -461,6 +518,11 @@ onMounted(() => {
   text-align: center;
   color: white;
 }
+.promo-price-line { display:flex; align-items:baseline; justify-content:center; gap:.5rem; flex-wrap:wrap; }
+.original-price { text-decoration: line-through; opacity:.85; }
+.discounted-price { font-size: 2.25rem; font-weight:800; color:#22c55e; }
+.arrow { opacity:.8; }
+.percent { color:#86efac; font-weight:700; }
 
 .price-container {
   display: flex;

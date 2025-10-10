@@ -16,6 +16,9 @@
         <button class="action-btn settings" @click="showMenu = true">
           <span class="btn-icon">⚙️</span>
         </button>
+        <button class="action-btn refresh" @click="loadData">
+          <span class="btn-icon">🔄</span>
+        </button>
       </div>
     </div>
 
@@ -291,32 +294,44 @@ const navigateToPendingPayments = () => {
 }
 
 const loadData = async () => {
-  await Promise.all([
-    store.fetchDashboardSummary(),
-    store.fetchProducts(),
-    store.fetchSales()
-  ])
-  
-  // Calculate pending amount from sales with installments
-  const sales = store.sales.value || []
-  const pending = sales.reduce((total, sale) => {
-    if (sale.installments && sale.installments.length > 0) {
-      const unpaidInstallments = sale.installments.filter(inst => 
+  try {
+    console.log('🔄 Reloading dashboard data...')
+    await Promise.all([
+      store.fetchCustomers(),
+      store.fetchProducts(),
+      store.fetchSales(),
+      store.fetchDashboardSummary()
+    ])
+    
+    console.log('📊 Dashboard data after reload:')
+    console.log('Products count:', store.products?.length || 0)
+    console.log('Dashboard summary:', store.dashboardSummary)
+    
+    // Calculate pending amount from sales with installments
+    const sales = store.sales.value || []
+    const pending = sales.reduce((total, sale) => {
+      if (sale.installments && sale.installments.length > 0) {
+        const unpaidInstallments = sale.installments.filter(inst => 
+          inst.status === 'pending' || inst.status === 'overdue'
+        )
+        return total + unpaidInstallments.reduce((sum, inst) => sum + inst.value, 0)
+      }
+      return total
+    }, 0)
+    pendingAmount.value = pending
+
+    // Calculate notification count
+    const notifications = sales.filter(sale => 
+      sale.installments && sale.installments.some(inst => 
         inst.status === 'pending' || inst.status === 'overdue'
       )
-      return total + unpaidInstallments.reduce((sum, inst) => sum + inst.value, 0)
-    }
-    return total
-  }, 0)
-  pendingAmount.value = pending
-
-  // Calculate notification count
-  const notifications = sales.filter(sale => 
-    sale.installments && sale.installments.some(inst => 
-      inst.status === 'pending' || inst.status === 'overdue'
-    )
-  ).length
-  notificationCount.value = notifications
+    ).length
+    notificationCount.value = notifications
+    
+    console.log('✅ Dashboard data reloaded')
+  } catch (error) {
+    console.error('❌ Error reloading dashboard data:', error)
+  }
 }
 
 onMounted(() => {

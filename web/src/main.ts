@@ -19,6 +19,9 @@ import PendingPayments from './pages/PendingPayments.vue'
 import ProductDetails from './pages/ProductDetails.vue'
 import EditProduct from './pages/EditProduct.vue'
 import PublicProduct from './pages/PublicProduct.vue'
+import PublicCampaign from './pages/PublicCampaign.vue'
+import Promotions from './pages/Promotions.vue'
+import Campaigns from './pages/Campaigns.vue'
 
 // Router configuration
 const routes = [
@@ -32,10 +35,13 @@ const routes = [
   { path: '/profile', component: Profile },
   { path: '/sales-history', component: SalesHistory },
   { path: '/users', component: Users },
+  { path: '/promotions', component: Promotions },
+  { path: '/campaigns', component: Campaigns },
   { path: '/pending-payments', component: PendingPayments },
   { path: '/product/:id', component: ProductDetails },
   { path: '/product/:id/edit', component: EditProduct },
-  { path: '/public/product/:name', component: PublicProduct }
+  { path: '/public/product/:name', component: PublicProduct },
+  { path: '/public/campaign/:id', component: PublicCampaign }
 ]
 
 const router = createRouter({

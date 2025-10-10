@@ -45,6 +45,14 @@
           <span class="nav-item-icon">👥</span>
           Usuários
         </router-link>
+        <router-link to="/promotions" class="nav-item" @click="closeSidebar">
+          <span class="nav-item-icon">🏷️</span>
+          Promoções
+        </router-link>
+        <router-link to="/campaigns" class="nav-item" @click="closeSidebar">
+          <span class="nav-item-icon">📣</span>
+          Campanhas
+        </router-link>
               <router-link to="/pending-payments" class="nav-item" @click="closeSidebar">
                 <span class="nav-item-icon">💰</span>
                 Pagamentos Pendentes

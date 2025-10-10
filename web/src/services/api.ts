@@ -58,6 +58,29 @@ export interface DashboardSummary {
   topProducts: { name: string; quantity: number }[]
 }
 
+export interface PromotionProduct {
+  productId: string
+  name: string
+  unitPrice: number
+}
+
+export interface Promotion {
+  id?: string
+  name: string
+  discountPercent: number
+  startAt: string
+  endAt: string
+  products: PromotionProduct[]
+}
+
+export interface Campaign {
+  id?: string
+  name: string
+  promotionIds: string[]
+  audience: string
+  channel: 'email' | 'whatsapp'
+  publicId?: string
+}
 
 class ApiService {
   private async testConnection(): Promise<boolean> {
@@ -256,6 +279,70 @@ class ApiService {
     })
   }
 
+  // Promotions
+  async getPromotions(): Promise<Promotion[]> {
+    const data = await this.request<any>('promotions')
+    if (!Array.isArray(data)) return []
+    return data.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      discountPercent: Number(row.discountPercent) || 0,
+      startAt: row.startAt,
+      endAt: row.endAt,
+      products: Array.isArray(row.products) ? row.products : (() => { try { return JSON.parse(row.products) } catch { return [] } })()
+    }))
+  }
+
+  async createPromotion(promotion: Promotion): Promise<Promotion> {
+    const payload = {
+      mode: 'append',
+      rows: [
+        {
+          name: promotion.name,
+          discountPercent: promotion.discountPercent,
+          startAt: promotion.startAt,
+          endAt: promotion.endAt,
+          products: promotion.products
+        }
+      ]
+    }
+    const result = await this.request<any>('promotions', { method: 'POST', body: JSON.stringify(payload) })
+    return Array.isArray(result) && result[0] ? { ...promotion, id: result[0].id } : promotion
+  }
+
+  // Campaigns
+  async getCampaigns(): Promise<Campaign[]> {
+    const data = await this.request<any>('campaigns')
+    if (!Array.isArray(data)) return []
+    return data.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      promotionIds: Array.isArray(row.promotionIds) ? row.promotionIds : (() => { try { return JSON.parse(row.promotionIds) } catch { return [] } })(),
+      audience: row.audience || 'todos',
+      channel: (row.channel as any) || 'whatsapp',
+      publicId: row.publicId
+    }))
+  }
+
+  async createCampaign(campaign: Campaign): Promise<Campaign> {
+    const payload = {
+      mode: 'append',
+      rows: [
+        {
+          name: campaign.name,
+          promotionIds: campaign.promotionIds,
+          audience: campaign.audience,
+          channel: campaign.channel,
+          publicId: campaign.publicId || `camp_${Date.now()}`
+        }
+      ]
+    }
+    const result = await this.request<any>('campaigns', { method: 'POST', body: JSON.stringify(payload) })
+    const id = Array.isArray(result) && result[0] ? result[0].id : campaign.id
+    const publicId = Array.isArray(result) && result[0] ? (result[0].publicId || payload.rows[0].publicId) : payload.rows[0].publicId
+    return { ...campaign, id, publicId }
+  }
+
   // Dashboard
   async getDashboardSummary(): Promise<DashboardSummary> {
     const [products, sales, customers] = await Promise.all([
@@ -264,10 +351,22 @@ class ApiService {
       this.getCustomers()
     ])
 
+    console.log('📊 Dashboard Summary - Raw data:')
+    console.log('Products count:', products.length)
+    console.log('Products:', products.map(p => ({ name: p.name, quantity: p.quantity })))
+    console.log('Sales count:', sales.length)
+    console.log('Customers count:', customers.length)
+
     const totalSalesValue = sales.reduce((sum, sale) => sum + sale.totalValue, 0)
     const totalProfit = sales.reduce((sum, sale) => sum + sale.profit, 0)
     const lowStockProducts = products.filter(p => p.quantity < 10).length
     const recentSales = sales.slice(-5).reverse()
+
+    console.log('📊 Dashboard Summary - Calculated:')
+    console.log('Total products:', products.length)
+    console.log('Low stock products:', lowStockProducts)
+    console.log('Total sales value:', totalSalesValue)
+    console.log('Total profit:', totalProfit)
 
     // Calculate top products
     const productSales = sales.reduce((acc, sale) => {

@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { apiService, type Product, type Customer, type Sale, type DashboardSummary } from '../services/api'
+import { apiService, type Product, type Customer, type Sale, type DashboardSummary, type Promotion, type Campaign } from '../services/api'
 
 export const useAppStore = defineStore('app', () => {
   // State
   const products = ref<Product[]>([])
   const customers = ref<Customer[]>([])
   const sales = ref<Sale[]>([])
+  const promotions = ref<Promotion[]>([])
+  const campaigns = ref<Campaign[]>([])
   const dashboardSummary = ref<DashboardSummary | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -201,6 +203,8 @@ export const useAppStore = defineStore('app', () => {
     products,
     customers,
     sales,
+    promotions,
+    campaigns,
     dashboardSummary,
     loading,
     error,
@@ -223,6 +227,21 @@ export const useAppStore = defineStore('app', () => {
     updateCustomer,
     fetchSales,
     createSale,
+    async fetchPromotions() {
+      promotions.value = await apiService.getPromotions()
+    },
+    async createPromotion(promotion: Promotion) {
+      const created = await apiService.createPromotion(promotion)
+      promotions.value.unshift(created)
+      try { localStorage.setItem('promotions', JSON.stringify(promotions.value)) } catch {}
+    },
+    async fetchCampaigns() {
+      campaigns.value = await apiService.getCampaigns()
+    },
+    async createCampaign(campaign: Campaign) {
+      const created = await apiService.createCampaign(campaign)
+      campaigns.value.unshift(created)
+    },
     fetchDashboardSummary,
     initializeData
   }
