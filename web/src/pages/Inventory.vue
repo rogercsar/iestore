@@ -388,8 +388,14 @@ const closeShareModal = () => {
 
 // Função removida - produtos duplicados foram identificados e corrigidos
 
-onMounted(() => {
+onMounted(async () => {
   store.fetchProducts()
+  
+  // Importar e disponibilizar função de substituição
+  const { replaceAllProducts } = await import('../scripts/replaceProducts')
+  if (typeof window !== 'undefined') {
+    (window as any).replaceAllProducts = replaceAllProducts
+  }
 })
 </script>
 

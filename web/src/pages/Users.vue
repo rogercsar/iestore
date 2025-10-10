@@ -141,7 +141,7 @@
                 <input type="file" accept="image/*" @change="onPhotoChange" :disabled="uploadInProgress" />
                 <div v-if="uploadInProgress" class="upload-progress">
                   <div class="spinner"></div>
-                  <span>Enviando foto...</span>
+                  <span>Processando foto...</span>
                 </div>
               </div>
             </div>
@@ -289,7 +289,7 @@ const handleAddUser = async () => {
       role: activeUser.value.role,
       status: 'active'
     }
-    // Upload photo to Cloudinary if provided (dataURL way)
+    // Convert photo to DataURL and store in database
     const fileEl = (document.querySelector('.photo-input-row input[type="file"]') as HTMLInputElement | null)
     const file = fileEl?.files?.[0] || null
     if (file) {
@@ -301,16 +301,12 @@ const handleAddUser = async () => {
           reader.onerror = () => reject(reader.error)
           reader.readAsDataURL(file)
         })
-        const up = await fetch('/.netlify/functions/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) })
-        const upJson = await up.json()
-        if (up.ok && upJson.url) {
-          activeUser.value.photo = upJson.url
-        } else {
-          alert('Erro ao enviar foto: ' + (upJson.error || 'Erro desconhecido'))
-        }
+        // Store DataURL directly in database
+        activeUser.value.photo = dataUrl
+        console.log('Foto convertida para DataURL e será salva no banco')
       } catch (error) {
-        console.error('Erro no upload:', error)
-        alert('Erro ao enviar foto. Tente novamente.')
+        console.error('Erro ao processar foto:', error)
+        alert('Erro ao processar foto. Tente novamente.')
       } finally {
         uploadInProgress.value = false
       }
@@ -398,7 +394,7 @@ const handleUpdateUser = async () => {
       return
     }
 
-    // Upload new photo if a new file was selected
+    // Convert new photo to DataURL if a new file was selected
     const fileEl = (document.querySelector('.photo-input-row input[type="file"]') as HTMLInputElement | null)
     const file = fileEl?.files?.[0] || null
     if (file) {
@@ -410,16 +406,12 @@ const handleUpdateUser = async () => {
           reader.onerror = () => reject(reader.error)
           reader.readAsDataURL(file)
         })
-        const up = await fetch('/.netlify/functions/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) })
-        const upJson = await up.json()
-        if (up.ok && upJson.url) {
-          patch.photo = upJson.url
-        } else {
-          alert('Erro ao enviar foto: ' + (upJson.error || 'Erro desconhecido'))
-        }
+        // Store DataURL directly in database
+        patch.photo = dataUrl
+        console.log('Nova foto convertida para DataURL e será salva no banco')
       } catch (error) {
-        console.error('Erro no upload:', error)
-        alert('Erro ao enviar foto. Tente novamente.')
+        console.error('Erro ao processar foto:', error)
+        alert('Erro ao processar foto. Tente novamente.')
       } finally {
         uploadInProgress.value = false
       }
