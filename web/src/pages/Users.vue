@@ -250,7 +250,7 @@ const handleToggleUserStatus = async (userId: string) => {
   }
 }
 
-const handleDeleteUser = (userId: string) => {
+const handleDeleteUser = async (userId: string) => {
   if (!confirm('Tem certeza que deseja excluir este usuário?')) return
   const prev = users.value
   users.value = users.value.filter(user => user.id !== userId)
