@@ -186,6 +186,8 @@ async function ensureUsersTable(client: any) {
       email text NOT NULL,
       username text UNIQUE,
       password text,
+      phone text,
+      photo text,
       role text NOT NULL DEFAULT 'user',
       status text NOT NULL DEFAULT 'active',
       created_at timestamptz NOT NULL DEFAULT now(),
@@ -195,6 +197,8 @@ async function ensureUsersTable(client: any) {
   // add columns if missing (idempotent)
   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username text UNIQUE`);
   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password text`);
+  await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone text`);
+  await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS photo text`);
 }
 
 async function handlePromotions(event: any, client: any, headers: any) {
@@ -276,7 +280,7 @@ async function handleCampaigns(event: any, client: any, headers: any) {
 async function handleUsers(event: any, client: any, headers: any) {
   if (event.httpMethod === 'GET') {
     const result = await client.query(`
-      SELECT id, name, email, username, role, status
+      SELECT id, name, email, username, phone, photo, role, status
       FROM users
       ORDER BY created_at DESC
     `);
@@ -289,17 +293,19 @@ async function handleUsers(event: any, client: any, headers: any) {
     if (action === 'append' && Array.isArray(data) && data.length > 0) {
       const u = data[0];
       await client.query(
-        `INSERT INTO users (id, name, email, username, password, role, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)
+        `INSERT INTO users (id, name, email, username, password, phone, photo, role, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
          ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name,
            email = EXCLUDED.email,
            username = COALESCE(EXCLUDED.username, users.username),
            password = COALESCE(EXCLUDED.password, users.password),
+           phone = COALESCE(EXCLUDED.phone, users.phone),
+           photo = COALESCE(EXCLUDED.photo, users.photo),
            role = EXCLUDED.role,
            status = EXCLUDED.status,
            updated_at = CURRENT_TIMESTAMP`,
-        [u.id, u.name, u.email, u.username || null, u.password || null, u.role || 'user', u.status || 'active']
+        [u.id, u.name, u.email, u.username || null, u.password || null, u.phone || null, u.photo || null, u.role || 'user', u.status || 'active']
       );
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
@@ -314,6 +320,8 @@ async function handleUsers(event: any, client: any, headers: any) {
       if (typeof patch.email === 'string') { fields.push(`email = $${++idx}`); values.push(patch.email); }
       if (typeof patch.username === 'string') { fields.push(`username = $${++idx}`); values.push(patch.username); }
       if (typeof patch.password === 'string') { fields.push(`password = $${++idx}`); values.push(patch.password); }
+      if (typeof patch.phone === 'string') { fields.push(`phone = $${++idx}`); values.push(patch.phone); }
+      if (typeof patch.photo === 'string') { fields.push(`photo = $${++idx}`); values.push(patch.photo); }
       if (typeof patch.role === 'string') { fields.push(`role = $${++idx}`); values.push(patch.role); }
       if (typeof patch.status === 'string') { fields.push(`status = $${++idx}`); values.push(patch.status); }
       if (fields.length > 0) {

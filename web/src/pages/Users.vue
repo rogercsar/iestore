@@ -33,9 +33,16 @@
         <div v-for="user in users" :key="user.id" class="user-item">
           <Card shadow="sm">
             <div class="user-header">
+              <div class="user-avatar" v-if="user.photo">
+                <img :src="user.photo" :alt="user.name" class="avatar-image" />
+              </div>
+              <div class="user-avatar initials" v-else>
+                {{ getInitials(user.name) }}
+              </div>
               <div class="user-info">
                 <h3 class="user-name">{{ user.name }}</h3>
                 <p class="user-email">{{ user.email }}</p>
+                <p class="user-username">@{{ user.username || 'sem-username' }}</p>
                 <div class="user-badges">
                   <span class="badge" :class="user.role === 'admin' ? 'badge-admin' : 'badge-user'">
                     {{ user.role === 'admin' ? 'Admin' : 'Usuário' }}
@@ -46,6 +53,12 @@
                 </div>
               </div>
               <div class="user-actions">
+                <button 
+                  class="action-button"
+                  @click="openEdit(user)"
+                >
+                  <span class="action-icon">✏️</span>
+                </button>
                 <button 
                   class="action-button"
                   :class="user.status === 'active' ? 'action-pause' : 'action-play'"
@@ -68,18 +81,18 @@
     </div>
 
     <!-- Add User Modal -->
-    <div v-if="showAddForm" class="modal-overlay" @click="showAddForm = false">
+    <div v-if="showAddForm || showEditForm" class="modal-overlay" @click="closeModals">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h2 class="modal-title">Adicionar Usuário</h2>
-          <button class="close-button" @click="showAddForm = false">×</button>
+          <h2 class="modal-title">{{ showEditForm ? 'Editar Usuário' : 'Adicionar Usuário' }}</h2>
+          <button class="close-button" @click="closeModals">×</button>
         </div>
 
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label">Nome Completo *</label>
             <input
-              v-model="newUser.name"
+              v-model="activeUser.name"
               type="text"
               class="form-input"
               placeholder="Digite o nome completo"
@@ -87,9 +100,20 @@
           </div>
 
           <div class="form-group">
+            <label class="form-label">Username *</label>
+            <input
+              v-model="activeUser.username"
+              @input="activeUser.username = (activeUser.username || '').toLowerCase().trim()"
+              type="text"
+              class="form-input"
+              placeholder="usuário de login"
+            />
+          </div>
+
+          <div class="form-group">
             <label class="form-label">Email *</label>
             <input
-              v-model="newUser.email"
+              v-model="activeUser.email"
               type="email"
               class="form-input"
               placeholder="Digite o email"
@@ -97,9 +121,29 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Senha *</label>
+            <label class="form-label">Telefone</label>
             <input
-              v-model="newUser.password"
+              v-model="activeUser.phone"
+              type="tel"
+              class="form-input"
+              placeholder="(DDD) 99999-9999"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Foto (URL)</label>
+            <input
+              v-model="activeUser.photo"
+              type="url"
+              class="form-input"
+              placeholder="https://..."
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Senha {{ showEditForm ? '(deixe em branco para não alterar)' : '*' }}</label>
+            <input
+              v-model="activeUser.password"
               type="password"
               class="form-input"
               placeholder="Digite a senha"
@@ -111,15 +155,15 @@
             <div class="role-buttons">
               <button
                 class="role-button"
-                :class="{ active: newUser.role === 'user' }"
-                @click="newUser.role = 'user'"
+                :class="{ active: activeUser.role === 'user' }"
+                @click="activeUser.role = 'user'"
               >
                 Usuário
               </button>
               <button
                 class="role-button"
-                :class="{ active: newUser.role === 'admin' }"
-                @click="newUser.role = 'admin'"
+                :class="{ active: activeUser.role === 'admin' }"
+                @click="activeUser.role = 'admin'"
               >
                 Admin
               </button>
@@ -128,16 +172,16 @@
         </div>
 
         <div class="modal-footer">
-          <button class="cancel-button" @click="showAddForm = false">
+          <button class="cancel-button" @click="closeModals">
             Cancelar
           </button>
           <button 
             class="save-button" 
-            @click="handleAddUser"
+            @click="showEditForm ? handleUpdateUser() : handleAddUser()"
             :disabled="loading"
           >
             <span v-if="loading" class="loading-spinner"></span>
-            {{ loading ? 'Criando...' : 'Criar Usuário' }}
+            {{ loading ? (showEditForm ? 'Salvando...' : 'Criando...') : (showEditForm ? 'Salvar' : 'Criar Usuário') }}
           </button>
         </div>
       </div>
@@ -163,15 +207,34 @@ interface User {
 const users = ref<User[]>([])
 const loading = ref(false)
 const showAddForm = ref(false)
-const newUser = ref({
+const showEditForm = ref(false)
+const activeUser = ref({
+  id: '',
   name: '',
+  username: '',
   email: '',
+  phone: '',
+  photo: '',
   password: '',
   role: 'user' as 'admin' | 'user'
 })
 
 const goBack = () => {
   router.go(-1)
+}
+
+const isValidEmail = (email: string) => /.+@.+\..+/.test(email)
+const isValidPhone = (phone: string) => !phone || phone.replace(/\D+/g,'').length >= 10
+const getInitials = (name: string) => (name || '').split(' ').filter(Boolean).map(p => p[0]).join('').toUpperCase().slice(0,2)
+const isUsernameAvailable = async (username: string, excludeId?: string) => {
+  try {
+    const res = await fetch('/.netlify/functions/postgres?table=users')
+    if (!res.ok) return true // fail-open to avoid blocking
+    const list = await res.json()
+    return !Array.isArray(list) || !list.some((u: any) => (u.username || '').toLowerCase() === username.toLowerCase() && u.id !== excludeId)
+  } catch {
+    return true
+  }
 }
 
 const loadUsers = async () => {
@@ -190,8 +253,22 @@ const loadUsers = async () => {
 }
 
 const handleAddUser = async () => {
-  if (!newUser.value.name.trim() || !newUser.value.email.trim() || !newUser.value.password.trim()) {
+  activeUser.value.username = activeUser.value.username.trim().toLowerCase()
+  if (!activeUser.value.name.trim() || !activeUser.value.username.trim() || !activeUser.value.email.trim() || !activeUser.value.password.trim()) {
     alert('Preencha todos os campos obrigatórios')
+    return
+  }
+  if (!isValidEmail(activeUser.value.email)) {
+    alert('Email inválido')
+    return
+  }
+  if (!isValidPhone(activeUser.value.phone)) {
+    alert('Telefone inválido (informe DDD + número)')
+    return
+  }
+  const available = await isUsernameAvailable(activeUser.value.username.trim())
+  if (!available) {
+    alert('Username já está em uso. Escolha outro.')
     return
   }
 
@@ -199,20 +276,26 @@ const handleAddUser = async () => {
   try {
     const user: User = {
       id: `user_${Date.now()}`,
-      name: newUser.value.name.trim(),
-      email: newUser.value.email.trim(),
-      role: newUser.value.role,
+      name: activeUser.value.name.trim(),
+      email: activeUser.value.email.trim(),
+      role: activeUser.value.role,
       status: 'active'
     }
     // Persist via Netlify Function (append)
     const res = await fetch('/.netlify/functions/postgres?table=users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'append', data: [user] })
+      body: JSON.stringify({ action: 'append', data: [{
+        ...user,
+        username: activeUser.value.username.trim(),
+        phone: activeUser.value.phone || null,
+        photo: activeUser.value.photo || null,
+        password: activeUser.value.password || null
+      }] })
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     await loadUsers()
-    newUser.value = { name: '', email: '', password: '', role: 'user' }
+    resetActive()
     showAddForm.value = false
     alert('Usuário criado com sucesso!')
   } catch (error) {
@@ -220,13 +303,90 @@ const handleAddUser = async () => {
     // Fallback local (não persistente)
     users.value.push({
       id: `user_${Date.now()}`,
-      name: newUser.value.name.trim(),
-      email: newUser.value.email.trim(),
-      role: newUser.value.role,
+      name: activeUser.value.name.trim(),
+      username: activeUser.value.username.trim(),
+      email: activeUser.value.email.trim(),
+      role: activeUser.value.role,
       status: 'active'
     })
-    newUser.value = { name: '', email: '', password: '', role: 'user' }
+    resetActive()
     showAddForm.value = false
+  } finally {
+    loading.value = false
+  }
+}
+
+const openEdit = (user: any) => {
+  activeUser.value = {
+    id: user.id,
+    name: user.name || '',
+    username: user.username || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    photo: user.photo || '',
+    password: '',
+    role: user.role || 'user'
+  }
+  showEditForm.value = true
+}
+
+const closeModals = () => {
+  showAddForm.value = false
+  showEditForm.value = false
+}
+
+const resetActive = () => {
+  activeUser.value = { id: '', name: '', username: '', email: '', phone: '', photo: '', password: '', role: 'user' }
+}
+
+const handleUpdateUser = async () => {
+  if (!activeUser.value.id) return
+  loading.value = true
+  try {
+    activeUser.value.username = activeUser.value.username.trim().toLowerCase()
+    const patch: any = {
+      name: activeUser.value.name.trim(),
+      username: activeUser.value.username.trim(),
+      email: activeUser.value.email.trim(),
+      phone: activeUser.value.phone || null,
+      photo: activeUser.value.photo || null,
+      role: activeUser.value.role
+    }
+    if (!activeUser.value.username.trim()) {
+      alert('Username é obrigatório')
+      loading.value = false
+      return
+    }
+    if (!isValidEmail(patch.email)) {
+      alert('Email inválido')
+      loading.value = false
+      return
+    }
+    if (!isValidPhone(activeUser.value.phone)) {
+      alert('Telefone inválido (informe DDD + número)')
+      loading.value = false
+      return
+    }
+    const available = await isUsernameAvailable(activeUser.value.username.trim(), activeUser.value.id)
+    if (!available) {
+      alert('Username já está em uso. Escolha outro.')
+      loading.value = false
+      return
+    }
+    if (activeUser.value.password && activeUser.value.password.trim()) {
+      patch.password = activeUser.value.password
+    }
+    const res = await fetch('/.netlify/functions/postgres?table=users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'overwrite', id: activeUser.value.id, data: patch })
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    await loadUsers()
+    closeModals()
+    resetActive()
+  } catch (e) {
+    console.error('Falha ao atualizar usuário', e)
   } finally {
     loading.value = false
   }
@@ -394,6 +554,29 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-200);
+  color: var(--gray-700);
+  font-weight: 700;
+}
+
+.user-avatar .avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-avatar.initials {
+  font-size: 0.875rem;
 }
 
 .user-info {
