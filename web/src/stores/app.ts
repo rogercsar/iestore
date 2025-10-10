@@ -147,6 +147,20 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  const deleteCustomer = async (id: string) => {
+    try {
+      setLoading(true)
+      clearError()
+      await apiService.deleteCustomer(id)
+      await fetchCustomers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao deletar cliente')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Sales
   const fetchSales = async () => {
     try {
@@ -225,6 +239,7 @@ export const useAppStore = defineStore('app', () => {
     fetchCustomers,
     createCustomer,
     updateCustomer,
+    deleteCustomer,
     fetchSales,
     createSale,
     async fetchPromotions() {

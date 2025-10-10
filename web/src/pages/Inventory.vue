@@ -86,7 +86,7 @@
             <button class="action-btn edit-btn" @click="editProduct(product)">
               <span>✏️</span>
             </button>
-            <button class="action-btn delete-btn" @click="deleteProduct(product.id!)">
+            <button class="action-btn delete-btn" @click="deleteProduct(product.name)">
               <span>🗑️</span>
             </button>
           </div>

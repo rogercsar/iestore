@@ -346,8 +346,7 @@ const deleteCustomer = async (id: string) => {
   if (confirm('Tem certeza que deseja excluir este cliente?')) {
     try {
       console.log('Delete customer:', id)
-      // TODO: Implementar delete via API
-      await store.fetchCustomers() // Recarregar lista
+      await store.deleteCustomer(id)
       alert('Cliente excluído com sucesso!')
     } catch (error) {
       console.error('Erro ao excluir cliente:', error)

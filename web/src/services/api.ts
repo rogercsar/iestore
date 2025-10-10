@@ -217,7 +217,9 @@ class ApiService {
 
   async deleteProduct(id: string): Promise<void> {
     const products = await this.getProducts()
-    const filteredProducts = products.filter(p => p.id !== id)
+    // Como os produtos não têm ID, vamos usar o nome como identificador único
+    // O parâmetro 'id' na verdade é o nome do produto
+    const filteredProducts = products.filter(p => p.name !== id)
     await this.request('products', {
       method: 'POST',
       body: JSON.stringify({
@@ -262,6 +264,18 @@ class ApiService {
         })
       })
     }
+  }
+
+  async deleteCustomer(id: string): Promise<void> {
+    const customers = await this.getCustomers()
+    const filteredCustomers = customers.filter(c => c.id !== id)
+    await this.request('customers', {
+      method: 'POST',
+      body: JSON.stringify({
+        mode: 'overwrite',
+        rows: filteredCustomers
+      })
+    })
   }
 
   // Sales
