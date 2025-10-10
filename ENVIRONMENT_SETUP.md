@@ -9,12 +9,12 @@ O GitHub estava bloqueando o push porque detectou credenciais hardcoded nos arqu
 ## 📋 Variáveis Necessárias
 
 ```bash
-DATABASE_URL=postgres://avnadmin:AVNS_9TcNWXsmcK0ZLQ_tO9X@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require
+DATABASE_URL=postgres://avnadmin:YOUR_PASSWORD@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require
 DB_HOST=iestore-iestore.b.aivencloud.com
 DB_PORT=15158
 DB_NAME=defaultdb
 DB_USER=avnadmin
-DB_PASSWORD=AVNS_9TcNWXsmcK0ZLQ_tO9X
+DB_PASSWORD=YOUR_PASSWORD
 DB_SSL=true
 ```
 
@@ -34,12 +34,12 @@ cp env.example .env
 ### 2. **Conteúdo do .env**
 
 ```bash
-DATABASE_URL=postgres://avnadmin:AVNS_9TcNWXsmcK0ZLQ_tO9X@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require
+DATABASE_URL=postgres://avnadmin:YOUR_PASSWORD@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require
 DB_HOST=iestore-iestore.b.aivencloud.com
 DB_PORT=15158
 DB_NAME=defaultdb
 DB_USER=avnadmin
-DB_PASSWORD=AVNS_9TcNWXsmcK0ZLQ_tO9X
+DB_PASSWORD=YOUR_PASSWORD
 DB_SSL=true
 ```
 
@@ -63,12 +63,12 @@ node scripts/test-netlify-functions.js
 
 | Variable | Value |
 |----------|-------|
-| `DATABASE_URL` | `postgres://avnadmin:AVNS_9TcNWXsmcK0ZLQ_tO9X@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require` |
+| `DATABASE_URL` | `postgres://avnadmin:YOUR_PASSWORD@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require` |
 | `DB_HOST` | `iestore-iestore.b.aivencloud.com` |
 | `DB_PORT` | `15158` |
 | `DB_NAME` | `defaultdb` |
 | `DB_USER` | `avnadmin` |
-| `DB_PASSWORD` | `AVNS_9TcNWXsmcK0ZLQ_tO9X` |
+| `DB_PASSWORD` | `YOUR_PASSWORD` |
 | `DB_SSL` | `true` |
 
 ### 2. **Verificar Deploy**
@@ -96,7 +96,7 @@ Os seguintes arquivos foram atualizados para usar variáveis de ambiente:
 
 ### **Antes (Inseguro):**
 ```typescript
-password: 'AVNS_9TcNWXsmcK0ZLQ_tO9X' // ❌ Hardcoded
+password: 'YOUR_PASSWORD' // ❌ Hardcoded
 ```
 
 ### **Depois (Seguro):**
@@ -109,7 +109,7 @@ password: process.env.DB_PASSWORD || '' // ✅ Variável de ambiente
 ### **1. Teste Local:**
 ```bash
 # Definir variáveis de ambiente
-export DB_PASSWORD="AVNS_9TcNWXsmcK0ZLQ_tO9X"
+export DB_PASSWORD="YOUR_PASSWORD"
 
 # Testar conexão
 node scripts/test-database.js
