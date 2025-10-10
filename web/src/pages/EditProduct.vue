@@ -184,41 +184,33 @@ const loadProduct = async () => {
   try {
     // Get product ID from route params
     const productId = route.params.id as string
+    console.log('🔍 Loading product with ID:', productId)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Fetch products from PostgreSQL API
+    const response = await fetch('/.netlify/functions/postgres?table=products')
     
-    // Mock product data
-    const mockProducts: Product[] = [
-      {
-        id: '1',
-        name: 'Produto A',
-        quantity: 15,
-        cost: 30,
-        unitPrice: 50,
-        photo: 'https://via.placeholder.com/200x200?text=Produto+A'
-      },
-      {
-        id: '2',
-        name: 'Produto B',
-        quantity: 8,
-        cost: 40,
-        unitPrice: 80,
-        photo: 'https://via.placeholder.com/200x200?text=Produto+B'
-      }
-    ]
+    if (!response.ok) {
+      throw new Error('Erro ao carregar produtos')
+    }
+
+    const products: Product[] = await response.json()
+    console.log('✅ Products loaded from PostgreSQL:', products.length, 'products')
     
-    const foundProduct = mockProducts.find(p => p.id === productId)
+    const foundProduct = products.find(p => p.id === productId)
     if (foundProduct) {
       product.value = {
         name: foundProduct.name,
-        category: 'eletronicos',
-        quantity: foundProduct.quantity,
-        cost: foundProduct.cost,
-        unitPrice: foundProduct.unitPrice,
+        category: foundProduct.category || 'eletronicos',
+        quantity: parseInt(foundProduct.quantity.toString()) || 0,
+        cost: parseFloat(foundProduct.cost.toString()) || 0,
+        unitPrice: parseFloat(foundProduct.unitPrice.toString()) || 0,
         photo: foundProduct.photo || '',
-        description: 'Descrição do produto...'
+        description: foundProduct.description || 'Descrição do produto...'
       }
+      console.log('✅ Product loaded:', product.value)
+    } else {
+      console.log('❌ Product not found with ID:', productId)
+      console.log('Available products:', products.map(p => ({ id: p.id, name: p.name })))
     }
   } catch (error) {
     console.error('Error loading product:', error)
@@ -250,12 +242,39 @@ const handleSubmit = async () => {
 
   loading.value = true
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Get product ID from route params
+    const productId = route.params.id as string
     
+    // Update product via PostgreSQL API
+    const response = await fetch('/.netlify/functions/postgres?table=products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        mode: 'append',
+        rows: [{
+          id: productId,
+          name: product.value.name,
+          category: product.value.category,
+          quantity: product.value.quantity,
+          cost: product.value.cost,
+          unitPrice: product.value.unitPrice,
+          photo: product.value.photo,
+          description: product.value.description
+        }]
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error('Erro ao atualizar produto')
+    }
+    
+    console.log('✅ Product updated successfully')
     alert('Produto atualizado com sucesso!')
     router.go(-1)
   } catch (error) {
+    console.error('❌ Error updating product:', error)
     alert('Falha ao atualizar produto')
   } finally {
     loading.value = false

@@ -357,7 +357,7 @@ const removeNewProductImage = () => {
 
 const editProduct = (product: Product) => {
   // Navigate to edit product page
-  router.push(`/edit-product/${product.id}`)
+  router.push(`/product/${product.id}/edit`)
 }
 
 const deleteProduct = async (id: string) => {
