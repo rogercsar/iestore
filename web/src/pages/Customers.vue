@@ -196,7 +196,6 @@ import { useAppStore } from '../stores/app'
 import type { Customer, Sale } from '../services/api'
 
 const store = useAppStore()
-const { customers, sales, loading, error } = store
 
 const searchQuery = ref('')
 const statusFilter = ref('')
@@ -213,12 +212,12 @@ const newCustomer = ref({
 
 const filteredCustomers = computed(() => {
   console.log('🔍 Computing filtered customers...')
-  console.log('📦 Raw customers from store:', customers.value)
-  console.log('📦 Customers length:', customers.value?.length)
-  console.log('📦 Loading state:', loading.value)
-  console.log('📦 Error state:', error.value)
+  console.log('📦 Raw customers from store:', store.customers)
+  console.log('📦 Customers length:', store.customers?.length)
+  console.log('📦 Loading state:', store.loading)
+  console.log('📦 Error state:', store.error)
   
-  let filtered = customers.value || []
+  let filtered = store.customers || []
   console.log('🔍 Initial filtered customers:', filtered.length)
   
   // Debug: Check customer structure
@@ -278,13 +277,13 @@ const filteredCustomers = computed(() => {
 })
 
 const activeCustomers = computed(() => {
-  return (customers.value || []).filter(customer => (customer.status || 'active') === 'active').length
+  return (store.customers || []).filter(customer => (customer.status || 'active') === 'active').length
 })
 
 const newCustomersThisMonth = computed(() => {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  return (customers.value || []).filter(customer => {
+  return (store.customers || []).filter(customer => {
     const createdAt = new Date(customer.createdAt || '')
     return createdAt >= monthStart
   }).length
@@ -295,17 +294,17 @@ const getInitials = (name: string) => {
 }
 
 const getCustomerSalesCount = (customerId: string) => {
-  return (sales.value || []).filter(sale => sale.customerId === customerId).length
+  return (store.sales || []).filter(sale => sale.customerId === customerId).length
 }
 
 const getCustomerTotalValue = (customerId: string) => {
-  return (sales.value || [])
+  return (store.sales || [])
     .filter(sale => sale.customerId === customerId)
     .reduce((sum, sale) => sum + sale.totalValue, 0)
 }
 
 const getLastPurchaseDate = (customerId: string) => {
-  const customerSales = sales.value || []
+  const customerSales = store.sales || []
     .filter(sale => sale.customerId === customerId)
     .sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime())
   
