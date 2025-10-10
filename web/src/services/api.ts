@@ -200,10 +200,12 @@ class ApiService {
   }
 
   async updateProduct(id: string, product: Partial<Product>): Promise<void> {
-    // For now, we'll get all products, update the one we need, and overwrite
+    // Como os produtos não têm ID, vamos usar o nome como identificador único
+    // O parâmetro 'id' na verdade é o nome do produto original
     const products = await this.getProducts()
-    const index = products.findIndex(p => p.id === id)
+    const index = products.findIndex(p => p.name === id)
     if (index !== -1) {
+      // Atualizar o produto existente
       products[index] = { ...products[index], ...product }
       await this.request('products', {
         method: 'POST',
@@ -212,6 +214,8 @@ class ApiService {
           rows: products
         })
       })
+    } else {
+      throw new Error('Produto não encontrado')
     }
   }
 

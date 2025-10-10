@@ -131,10 +131,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Card from '../components/Card.vue'
+import { useAppStore } from '../stores/app'
 import type { Product } from '../services/api'
 
 const router = useRouter()
 const route = useRoute()
+const store = useAppStore()
 
 interface ProductForm {
   name: string
@@ -182,21 +184,16 @@ const formatCurrency = (value: number) => {
 const loadProduct = async () => {
   loading.value = true
   try {
-    // Get product ID from route params
-    const productId = route.params.id as string
-    console.log('🔍 Loading product with ID:', productId)
+    // Get product name from route params (used as ID)
+    const productName = decodeURIComponent(route.params.id as string)
+    console.log('🔍 Loading product with name:', productName)
     
-    // Fetch products from PostgreSQL API
-    const response = await fetch('/.netlify/functions/postgres?table=products')
+    // Fetch products from store
+    await store.fetchProducts()
+    const products = store.products
+    console.log('✅ Products loaded from store:', products.length, 'products')
     
-    if (!response.ok) {
-      throw new Error('Erro ao carregar produtos')
-    }
-
-    const products: Product[] = await response.json()
-    console.log('✅ Products loaded from PostgreSQL:', products.length, 'products')
-    
-    const foundProduct = products.find(p => p.id === productId)
+    const foundProduct = products.find(p => p.name === productName)
     if (foundProduct) {
       product.value = {
         name: foundProduct.name,
@@ -242,33 +239,19 @@ const handleSubmit = async () => {
 
   loading.value = true
   try {
-    // Get product ID from route params
-    const productId = route.params.id as string
+    // Get product name from route params (used as ID)
+    const originalProductName = decodeURIComponent(route.params.id as string)
     
-    // Update product via PostgreSQL API
-    const response = await fetch('/.netlify/functions/postgres?table=products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        mode: 'append',
-        rows: [{
-          id: productId,
-          name: product.value.name,
-          category: product.value.category,
-          quantity: product.value.quantity,
-          cost: product.value.cost,
-          unitPrice: product.value.unitPrice,
-          photo: product.value.photo,
-          description: product.value.description
-        }]
-      })
+    // Update product via store
+    await store.updateProduct(originalProductName, {
+      name: product.value.name,
+      category: product.value.category,
+      quantity: product.value.quantity,
+      cost: product.value.cost,
+      unitPrice: product.value.unitPrice,
+      photo: product.value.photo,
+      description: product.value.description
     })
-    
-    if (!response.ok) {
-      throw new Error('Erro ao atualizar produto')
-    }
     
     console.log('✅ Product updated successfully')
     alert('Produto atualizado com sucesso!')
