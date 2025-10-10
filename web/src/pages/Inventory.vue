@@ -7,9 +7,9 @@
         <p class="inventory-subtitle">Gerencie seu inventário de produtos</p>
       </div>
       <div class="header-actions">
-        <button class="export-button" @click="exportToPDF">
-          <span class="export-icon">📄</span>
-          <span class="export-text">Exportar PDF</span>
+        <button class="add-button" @click="exportToPDF">
+          <span class="add-icon">📄</span>
+          <span class="add-text">Exportar PDF</span>
         </button>
         <button class="add-button" @click="showAddModal = true">
           <span class="add-icon">➕</span>
@@ -1072,36 +1072,6 @@ onMounted(async () => {
   gap: 1rem;
 }
 
-.export-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-}
-
-.export-button:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.4);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.export-icon {
-  font-size: 1rem;
-}
-
-.export-text {
-  font-weight: 600;
-}
 
 @media (max-width: 768px) {
   .inventory-container {
@@ -1120,7 +1090,7 @@ onMounted(async () => {
     gap: 0.75rem;
   }
   
-  .export-button, .add-button {
+  .add-button {
     justify-content: center;
   }
   
