@@ -84,14 +84,32 @@
     <main class="main-content">
       <router-view />
     </main>
+
+    <!-- Alert Modal -->
+    <AlertModal
+      :show="alertState.show"
+      :type="alertState.type"
+      :title="alertState.title"
+      :message="alertState.message"
+      :details="alertState.details"
+      :confirm-text="alertState.confirmText"
+      :cancel-text="alertState.cancelText"
+      :show-cancel="alertState.showCancel"
+      @close="closeAlert(false)"
+      @confirm="closeAlert(true)"
+      @cancel="closeAlert(false)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import AlertModal from './components/AlertModal.vue'
+import { useAlert } from './composables/useAlert'
 
 const router = useRouter()
+const { alertState, closeAlert } = useAlert()
 
 const sidebarOpen = ref(false)
 
@@ -103,8 +121,14 @@ const closeSidebar = () => {
   sidebarOpen.value = false
 }
 
-const handleLogout = () => {
-  if (confirm('Tem certeza que deseja sair do sistema?')) {
+const handleLogout = async () => {
+  const { confirm } = useAlert()
+  const confirmed = await confirm(
+    'Confirmar Logout',
+    'Tem certeza que deseja sair do sistema?'
+  )
+  
+  if (confirmed) {
     // Remove token do localStorage
     localStorage.removeItem('auth_token')
     // Redireciona para login

@@ -91,11 +91,72 @@ export const handler: Handler = async (event, context) => {
   }
 };
 
+async function ensureProductsTable(client: any) {
+  // Primeiro, verificar se a tabela existe e se tem o campo id
+  const tableExists = await client.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_name = 'products'
+    )
+  `);
+  
+  if (tableExists.rows[0].exists) {
+    // Verificar se a tabela tem o campo id
+    const hasIdColumn = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_name = 'products' AND column_name = 'id'
+      )
+    `);
+    
+    if (!hasIdColumn.rows[0].exists) {
+      console.log('🔄 Adicionando coluna id à tabela products...');
+      // Adicionar coluna id
+      await client.query(`
+        ALTER TABLE products ADD COLUMN id TEXT
+      `);
+      
+      // Atualizar registros existentes com IDs únicos
+      const existingProducts = await client.query('SELECT name FROM products WHERE id IS NULL');
+      for (let i = 0; i < existingProducts.rows.length; i++) {
+        const productName = existingProducts.rows[i].name;
+        const newId = `product_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 6)}`;
+        await client.query(`
+          UPDATE products SET id = $1 WHERE name = $2
+        `, [newId, productName]);
+      }
+      
+      // Tornar id PRIMARY KEY
+      await client.query(`
+        ALTER TABLE products ADD PRIMARY KEY (id)
+      `);
+      
+      console.log('✅ Coluna id adicionada com sucesso!');
+    }
+  } else {
+    // Criar tabela nova com campo id
+    await client.query(`
+      CREATE TABLE products (
+        id TEXT PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        quantity INTEGER DEFAULT 0,
+        cost DECIMAL(10,2) DEFAULT 0,
+        unit_price DECIMAL(10,2) DEFAULT 0,
+        photo TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  }
+}
+
 async function handleProducts(event: any, client: any, headers: any, action: string) {
+  await ensureProductsTable(client);
+  
   if (event.httpMethod === 'GET') {
     // List products
     const result = await client.query(`
-      SELECT name, quantity, cost, unit_price as "unitPrice", photo
+      SELECT id, name, quantity, cost, unit_price as "unitPrice", photo
       FROM products 
       ORDER BY name
     `);
@@ -113,8 +174,8 @@ async function handleProducts(event: any, client: any, headers: any, action: str
     if (mode === 'append' && rows && rows.length > 0) {
       const product = rows[0];
       await client.query(`
-        INSERT INTO products (name, quantity, cost, unit_price, photo)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO products (id, name, quantity, cost, unit_price, photo)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (name) 
         DO UPDATE SET 
           quantity = EXCLUDED.quantity,
@@ -122,15 +183,15 @@ async function handleProducts(event: any, client: any, headers: any, action: str
           unit_price = EXCLUDED.unit_price,
           photo = EXCLUDED.photo,
           updated_at = CURRENT_TIMESTAMP
-      `, [product.name, product.quantity, product.cost, product.unitPrice, product.photo || null]);
+      `, [product.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, product.name, product.quantity, product.cost, product.unitPrice, product.photo || null]);
     } else if (mode === 'overwrite' && rows) {
       // Clear existing products and insert new ones
       await client.query('DELETE FROM products');
       for (const product of rows) {
         await client.query(`
-          INSERT INTO products (name, quantity, cost, unit_price, photo)
-          VALUES ($1, $2, $3, $4, $5)
-        `, [product.name, product.quantity, product.cost, product.unitPrice, product.photo || null]);
+          INSERT INTO products (id, name, quantity, cost, unit_price, photo)
+          VALUES ($1, $2, $3, $4, $5, $6)
+        `, [product.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, product.name, product.quantity, product.cost, product.unitPrice, product.photo || null]);
       }
     }
     

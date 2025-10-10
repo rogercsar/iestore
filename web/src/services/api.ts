@@ -200,10 +200,8 @@ class ApiService {
   }
 
   async updateProduct(id: string, product: Partial<Product>): Promise<void> {
-    // Como os produtos não têm ID, vamos usar o nome como identificador único
-    // O parâmetro 'id' na verdade é o nome do produto original
     const products = await this.getProducts()
-    const index = products.findIndex(p => p.name === id)
+    const index = products.findIndex(p => p.id === id)
     if (index !== -1) {
       // Atualizar o produto existente
       products[index] = { ...products[index], ...product }
@@ -221,9 +219,7 @@ class ApiService {
 
   async deleteProduct(id: string): Promise<void> {
     const products = await this.getProducts()
-    // Como os produtos não têm ID, vamos usar o nome como identificador único
-    // O parâmetro 'id' na verdade é o nome do produto
-    const filteredProducts = products.filter(p => p.name !== id)
+    const filteredProducts = products.filter(p => p.id !== id)
     await this.request('products', {
       method: 'POST',
       body: JSON.stringify({

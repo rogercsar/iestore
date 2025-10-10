@@ -286,15 +286,66 @@ const completeSale = async (id: string) => {
 }
 
 const handleNewSale = async () => {
-  console.log('New sale:', newSale.value)
-  // TODO: Implement new sale functionality
-  showNewSaleModal.value = false
-  newSale.value = {
-    customerId: '',
-    productId: '',
-    quantity: 1,
-    paymentMethod: '',
-    installments: 2
+  try {
+    loading.value = true
+    console.log('New sale:', newSale.value)
+    
+    // Encontrar o produto selecionado
+    const selectedProduct = products.value.find(p => p.id === newSale.value.productId)
+    const selectedCustomer = customers.value.find(c => c.id === newSale.value.customerId)
+    
+    if (!selectedProduct) {
+      alert('Produto não encontrado')
+      return
+    }
+    
+    if (!selectedCustomer) {
+      alert('Cliente não encontrado')
+      return
+    }
+    
+    // Calcular valores
+    const quantity = newSale.value.quantity
+    const totalValue = selectedProduct.unitPrice * quantity
+    const totalCost = selectedProduct.cost * quantity
+    const profit = totalValue - totalCost
+    
+    // Criar objeto da venda
+    const saleData = {
+      dateISO: new Date().toISOString(),
+      product: selectedProduct.name,
+      quantity: quantity,
+      totalValue: totalValue,
+      totalCost: totalCost,
+      profit: profit,
+      customerName: selectedCustomer.name,
+      customerPhone: selectedCustomer.phone,
+      paymentMethod: newSale.value.paymentMethod,
+      status: 'paid'
+    }
+    
+    console.log('Sale data:', saleData)
+    
+    // Salvar a venda
+    await store.createSale(saleData)
+    
+    alert('Venda registrada com sucesso!')
+    
+    // Fechar modal e limpar formulário
+    showNewSaleModal.value = false
+    newSale.value = {
+      customerId: '',
+      productId: '',
+      quantity: 1,
+      paymentMethod: '',
+      installments: 2
+    }
+    
+  } catch (error) {
+    console.error('Erro ao registrar venda:', error)
+    alert('Erro ao registrar venda. Tente novamente.')
+  } finally {
+    loading.value = false
   }
 }
 

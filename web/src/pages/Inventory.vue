@@ -86,7 +86,7 @@
             <button class="action-btn edit-btn" @click="editProduct(product)">
               <span>✏️</span>
             </button>
-            <button class="action-btn delete-btn" @click="deleteProduct(product.name)">
+            <button class="action-btn delete-btn" @click="deleteProduct(product.id!)">
               <span>🗑️</span>
             </button>
           </div>
@@ -366,8 +366,8 @@ const removeNewProductImage = () => {
 }
 
 const editProduct = (product: Product) => {
-  // Navigate to edit product page using product name as ID
-  router.push(`/product/${encodeURIComponent(product.name)}/edit`)
+  // Navigate to edit product page using product ID
+  router.push(`/product/${product.id}/edit`)
 }
 
 const deleteProduct = async (id: string) => {

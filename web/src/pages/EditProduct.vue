@@ -184,16 +184,16 @@ const formatCurrency = (value: number) => {
 const loadProduct = async () => {
   loading.value = true
   try {
-    // Get product name from route params (used as ID)
-    const productName = decodeURIComponent(route.params.id as string)
-    console.log('🔍 Loading product with name:', productName)
+    // Get product ID from route params
+    const productId = route.params.id as string
+    console.log('🔍 Loading product with ID:', productId)
     
     // Fetch products from store
     await store.fetchProducts()
     const products = store.products
     console.log('✅ Products loaded from store:', products.length, 'products')
     
-    const foundProduct = products.find(p => p.name === productName)
+    const foundProduct = products.find(p => p.id === productId)
     if (foundProduct) {
       product.value = {
         name: foundProduct.name,
@@ -239,11 +239,11 @@ const handleSubmit = async () => {
 
   loading.value = true
   try {
-    // Get product name from route params (used as ID)
-    const originalProductName = decodeURIComponent(route.params.id as string)
+    // Get product ID from route params
+    const productId = route.params.id as string
     
     // Update product via store
-    await store.updateProduct(originalProductName, {
+    await store.updateProduct(productId, {
       name: product.value.name,
       category: product.value.category,
       quantity: product.value.quantity,

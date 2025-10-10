@@ -127,9 +127,9 @@
 
         <!-- Card Actions -->
         <div class="card-actions">
-          <button class="action-btn primary" @click="viewCustomer(customer)">
+          <button class="action-btn primary" @click="viewCustomerDetails(customer)">
             <span class="btn-icon">👁️</span>
-            <span class="btn-text">Ver Perfil</span>
+            <span class="btn-text">Ver Detalhes</span>
           </button>
           <button class="action-btn secondary" @click="viewCustomerSales(customer.id!)">
             <span class="btn-icon">💰</span>
@@ -200,10 +200,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
+import { useAlert } from '../composables/useAlert'
 import type { Customer, Sale } from '../services/api'
 
+const router = useRouter()
 const store = useAppStore()
+const { success, error, confirm } = useAlert()
 
 const searchQuery = ref('')
 const statusFilter = ref('')
@@ -343,16 +347,33 @@ const editCustomer = (customer: Customer) => {
 }
 
 const deleteCustomer = async (id: string) => {
-  if (confirm('Tem certeza que deseja excluir este cliente?')) {
+  const confirmed = await confirm(
+    'Confirmar Exclusão',
+    'Tem certeza que deseja excluir este cliente?',
+    'Esta ação não pode ser desfeita.'
+  )
+  
+  if (confirmed) {
     try {
       console.log('Delete customer:', id)
       await store.deleteCustomer(id)
-      alert('Cliente excluído com sucesso!')
-    } catch (error) {
-      console.error('Erro ao excluir cliente:', error)
-      alert('Erro ao excluir cliente. Tente novamente.')
+      await success(
+        'Cliente Excluído',
+        'Cliente excluído com sucesso!'
+      )
+    } catch (err) {
+      console.error('Erro ao excluir cliente:', err)
+      await error(
+        'Erro ao Excluir',
+        'Não foi possível excluir o cliente.',
+        err.message
+      )
     }
   }
+}
+
+const viewCustomerDetails = (customer: Customer) => {
+  router.push(`/customer/${customer.id}`)
 }
 
 const viewCustomer = (customer: Customer) => {
