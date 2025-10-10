@@ -6,16 +6,10 @@
         <h1 class="inventory-title">Estoque</h1>
         <p class="inventory-subtitle">Gerencie seu inventário de produtos</p>
       </div>
-      <div class="header-actions">
-        <button class="add-button secondary" @click="addRealProducts">
-          <span class="add-icon">🔄</span>
-          <span class="add-text">Adicionar Produtos Reais</span>
-        </button>
-        <button class="add-button" @click="showAddModal = true">
-          <span class="add-icon">➕</span>
-          <span class="add-text">Adicionar Produto</span>
-        </button>
-      </div>
+      <button class="add-button" @click="showAddModal = true">
+        <span class="add-icon">➕</span>
+        <span class="add-text">Adicionar Produto</span>
+      </button>
     </div>
 
     <!-- Filters Card -->
@@ -392,9 +386,27 @@ const closeShareModal = () => {
   selectedProduct.value = null
 }
 
-const addRealProducts = async () => {
-  if (confirm('Deseja adicionar os produtos reais? Isso irá adicionar 23 produtos com imagens de exemplo.')) {
+const replaceAllProducts = async () => {
+  if (confirm('Deseja substituir todos os produtos pelos produtos reais? Isso irá excluir todos os produtos atuais e adicionar 23 produtos novos.')) {
     try {
+      console.log('🔄 Substituindo produtos...')
+      
+      // Primeiro, excluir todos os produtos existentes
+      const currentProducts = store.products || []
+      console.log(`🗑️ Excluindo ${currentProducts.length} produtos existentes...`)
+      
+      for (const product of currentProducts) {
+        try {
+          await store.deleteProduct(product.id!)
+          console.log(`✅ Produto excluído: ${product.name}`)
+        } catch (error) {
+          console.error(`❌ Erro ao excluir ${product.name}:`, error)
+        }
+      }
+      
+      // Aguardar um pouco para garantir que as exclusões foram processadas
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
       console.log('🔄 Adicionando produtos reais...')
       
       const realProducts = [
@@ -599,7 +611,7 @@ const addRealProducts = async () => {
       }
 
       if (successCount > 0) {
-        alert(`✅ ${successCount} produtos adicionados com sucesso!${errorCount > 0 ? `\n❌ ${errorCount} produtos falharam.` : ''}`)
+        alert(`✅ Substituição concluída! ${successCount} produtos reais adicionados.${errorCount > 0 ? `\n❌ ${errorCount} produtos falharam.` : ''}`)
         // Recarregar produtos
         await store.fetchProducts()
       } else {
@@ -614,6 +626,11 @@ const addRealProducts = async () => {
 
 onMounted(() => {
   store.fetchProducts()
+  
+  // Tornar a função disponível globalmente para uso no console
+  if (typeof window !== 'undefined') {
+    (window as any).replaceAllProducts = replaceAllProducts
+  }
 })
 </script>
 
@@ -653,12 +670,6 @@ onMounted(() => {
   flex: 1;
 }
 
-.header-actions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
 .inventory-title {
   font-size: 2rem;
   font-weight: 800;
@@ -696,14 +707,6 @@ onMounted(() => {
   box-shadow: 0 8px 16px rgba(139, 92, 246, 0.4);
 }
 
-.add-button.secondary {
-  background: linear-gradient(135deg, #06b6d4, #0891b2);
-  box-shadow: 0 2px 4px rgba(6, 182, 212, 0.3);
-}
-
-.add-button.secondary:hover {
-  box-shadow: 0 8px 16px rgba(6, 182, 212, 0.4);
-}
 
 .add-icon {
   font-size: 1.25rem;
