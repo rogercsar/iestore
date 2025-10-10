@@ -250,6 +250,7 @@ onMounted(() => {
 <style scoped>
 .customer-details {
   padding: 1.5rem;
+  padding-top: 5rem; /* Espaço para o header fixo */
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -276,8 +277,6 @@ onMounted(() => {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s ease;
-  position: relative;
-  z-index: 1001;
 }
 
 .back-btn:hover {

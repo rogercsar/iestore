@@ -443,6 +443,7 @@ onMounted(() => {
   flex: 1;
   background-color: var(--gray-50);
   padding: 1rem;
+  padding-top: 5rem; /* Espaço para o header fixo */
 }
 
 .customers-header {

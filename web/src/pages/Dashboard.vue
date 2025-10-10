@@ -363,6 +363,7 @@ onActivated(() => {
   flex: 1;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   padding: 1.5rem;
+  padding-top: 5rem; /* Espaço para o header fixo */
   min-height: 100vh;
 }
 

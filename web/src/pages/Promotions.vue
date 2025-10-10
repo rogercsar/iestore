@@ -348,7 +348,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.promotions-container { flex: 1; background: linear-gradient(135deg, #f8fafc, #e2e8f0); padding: 1.5rem; min-height: 100vh; box-sizing: border-box; }
+.promotions-container { flex: 1; background: linear-gradient(135deg, #f8fafc, #e2e8f0); padding: 1.5rem; padding-top: 5rem; min-height: 100vh; box-sizing: border-box; }
 .promotions-header { display:flex; justify-content:space-between; align-items:center; padding:2rem; background:linear-gradient(145deg,#fff,#f8fafc); border-radius:16px; border:1px solid rgba(226,232,240,.8); margin-bottom:2rem; position:relative; overflow:hidden; }
 .header-actions { display:flex; justify-content:flex-end; margin-top:-1rem; margin-bottom:1.5rem; }
 .header-actions .add-button { margin-left:auto; }
