@@ -4,7 +4,7 @@ export const environment = {
   useMockData: import.meta.env.DEV || import.meta.env.VITE_USE_MOCK_DATA === 'true',
   
   // API Configuration
-  apiBaseUrl: '/.netlify/functions/sheets',
+  apiBaseUrl: '/.netlify/functions/postgres',
   
   // App Configuration
   appName: 'i e store',
@@ -14,7 +14,8 @@ export const environment = {
   features: {
     enableAnimations: true,
     enableMockData: false,
-    enableGoogleSheets: true,
+    enableGoogleSheets: false,
+    enablePostgreSQL: true,
     enableNotifications: true,
     enableOfflineMode: false,
   },
@@ -29,6 +30,7 @@ if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
   environment.useMockData = true
   environment.features.enableMockData = true
   environment.features.enableGoogleSheets = false
+  environment.features.enablePostgreSQL = false
 }
 
 if (import.meta.env.VITE_API_BASE_URL) {

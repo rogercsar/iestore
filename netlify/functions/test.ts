@@ -8,9 +8,9 @@ const dbConfig = {
   database: process.env.DB_NAME || 'defaultdb',
   user: process.env.DB_USER || 'avnadmin',
   password: process.env.DB_PASSWORD || '',
-  ssl: process.env.DB_SSL === 'true' ? {
+  ssl: {
     rejectUnauthorized: false
-  } : false,
+  },
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
