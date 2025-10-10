@@ -6,10 +6,16 @@
         <h1 class="inventory-title">Estoque</h1>
         <p class="inventory-subtitle">Gerencie seu inventário de produtos</p>
       </div>
-      <button class="add-button" @click="showAddModal = true">
-        <span class="add-icon">➕</span>
-        <span class="add-text">Adicionar Produto</span>
-      </button>
+      <div class="header-actions">
+        <button class="add-button secondary" @click="addRealProducts">
+          <span class="add-icon">🔄</span>
+          <span class="add-text">Adicionar Produtos Reais</span>
+        </button>
+        <button class="add-button" @click="showAddModal = true">
+          <span class="add-icon">➕</span>
+          <span class="add-text">Adicionar Produto</span>
+        </button>
+      </div>
     </div>
 
     <!-- Filters Card -->
@@ -210,6 +216,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 import type { Product } from '../services/api'
+// import { addRealProducts as addRealProductsScript } from '../scripts/addRealProducts'
 import ShareModal from '../components/ShareModal.vue'
 import { ProductCategorizer } from '../utils/categorizer'
 
@@ -385,6 +392,24 @@ const closeShareModal = () => {
   selectedProduct.value = null
 }
 
+const addRealProducts = async () => {
+  if (confirm('Deseja adicionar os produtos reais? Isso irá adicionar 23 produtos com imagens de exemplo.')) {
+    try {
+      const success = await addRealProductsScript()
+      if (success) {
+        alert('✅ Produtos reais adicionados com sucesso!')
+        // Recarregar produtos
+        await store.fetchProducts()
+      } else {
+        alert('❌ Erro ao adicionar produtos. Verifique o console.')
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar produtos:', error)
+      alert('❌ Erro ao adicionar produtos.')
+    }
+  }
+}
+
 onMounted(() => {
   store.fetchProducts()
 })
@@ -426,6 +451,12 @@ onMounted(() => {
   flex: 1;
 }
 
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
 .inventory-title {
   font-size: 2rem;
   font-weight: 800;
@@ -461,6 +492,15 @@ onMounted(() => {
 .add-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 16px rgba(139, 92, 246, 0.4);
+}
+
+.add-button.secondary {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  box-shadow: 0 2px 4px rgba(6, 182, 212, 0.3);
+}
+
+.add-button.secondary:hover {
+  box-shadow: 0 8px 16px rgba(6, 182, 212, 0.4);
 }
 
 .add-icon {
