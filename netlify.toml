@@ -1,5 +1,5 @@
 [build]
-  command = "cd web && npm ci && npm run build"
+  command = "npm ci && cd web && npm ci && npm run build"
   publish = "web/dist"
 
 # Serve built assets without SPA rewrite
