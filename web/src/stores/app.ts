@@ -103,8 +103,14 @@ export const useAppStore = defineStore('app', () => {
     try {
       setLoading(true)
       clearError()
-      customers.value = await apiService.getCustomers()
+      console.log('🔄 Fetching customers from API...')
+      const fetchedCustomers = await apiService.getCustomers()
+      console.log('📦 Customers fetched:', fetchedCustomers)
+      console.log('📦 Customers count:', fetchedCustomers.length)
+      customers.value = fetchedCustomers
+      console.log('✅ Customers stored in state:', customers.value)
     } catch (err) {
+      console.error('❌ Error fetching customers:', err)
       setError(err instanceof Error ? err.message : 'Erro ao carregar clientes')
     } finally {
       setLoading(false)

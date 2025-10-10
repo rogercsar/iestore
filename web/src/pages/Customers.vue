@@ -215,6 +215,8 @@ const filteredCustomers = computed(() => {
   console.log('🔍 Computing filtered customers...')
   console.log('📦 Raw customers from store:', customers.value)
   console.log('📦 Customers length:', customers.value?.length)
+  console.log('📦 Loading state:', loading.value)
+  console.log('📦 Error state:', error.value)
   
   let filtered = customers.value || []
   console.log('🔍 Initial filtered customers:', filtered.length)
@@ -379,6 +381,7 @@ const handleAddCustomer = async () => {
 }
 
 onMounted(() => {
+  console.log('🚀 Customers page mounted, fetching data...')
   store.fetchCustomers()
   store.fetchSales()
 })

@@ -206,7 +206,11 @@ class ApiService {
 
   // Customers
   async getCustomers(): Promise<Customer[]> {
-    return this.request<Customer[]>('customers')
+    console.log('🔄 API: Getting customers...')
+    const result = await this.request<Customer[]>('customers')
+    console.log('📦 API: Customers result:', result)
+    console.log('📦 API: Customers count:', result.length)
+    return result
   }
 
   async createCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
