@@ -2,10 +2,13 @@
   <div class="inventory-container">
     <!-- Header -->
     <div class="inventory-header">
-      <h1 class="inventory-title">Estoque</h1>
+      <div class="header-content">
+        <h1 class="inventory-title">Estoque</h1>
+        <p class="inventory-subtitle">Gerencie seu inventário de produtos</p>
+      </div>
       <button class="add-button" @click="showAddModal = true">
         <span class="add-icon">➕</span>
-        <span class="add-text">Adicionar</span>
+        <span class="add-text">Adicionar Produto</span>
       </button>
     </div>
 
@@ -390,40 +393,74 @@ onMounted(() => {
 <style scoped>
 .inventory-container {
   flex: 1;
-  background-color: var(--gray-50);
-  padding: 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 1.5rem;
+  min-height: 100vh;
 }
 
 .inventory-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 2rem;
-  margin-bottom: 1.5rem;
+  padding: 2rem;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.inventory-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+}
+
+.header-content {
+  flex: 1;
 }
 
 .inventory-title {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 800;
-  color: var(--gray-800);
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #1e293b, #475569);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.inventory-subtitle {
+  font-size: 1rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .add-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   color: white;
   border: none;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  padding: 0.875rem 1.5rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
 }
 
 .add-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(139, 92, 246, 0.4);
 }
 
 .add-icon {
@@ -431,12 +468,25 @@ onMounted(() => {
 }
 
 .filters-card {
-  background-color: white;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--gray-200);
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.filters-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #06b6d4, #0891b2);
+  opacity: 0.7;
 }
 
 .search-container {

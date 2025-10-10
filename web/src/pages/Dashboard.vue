@@ -2,16 +2,19 @@
   <div class="dashboard-container">
     <!-- Header -->
     <div class="dashboard-header">
-      <h1 class="dashboard-title">Dashboard</h1>
+      <div class="header-content">
+        <h1 class="dashboard-title">Dashboard</h1>
+        <p class="dashboard-subtitle">Visão geral do seu negócio</p>
+      </div>
       <div class="header-actions">
-        <button class="notification-btn" @click="showNotifications = true">
-          <span class="notification-icon">🔔</span>
+        <button class="action-btn notification" @click="showNotifications = true">
+          <span class="btn-icon">🔔</span>
           <span v-if="notificationCount > 0" class="notification-badge">
             {{ notificationCount > 99 ? '99+' : notificationCount }}
           </span>
         </button>
-        <button class="menu-btn" @click="showMenu = true">
-          <span>⚙️</span>
+        <button class="action-btn settings" @click="showMenu = true">
+          <span class="btn-icon">⚙️</span>
         </button>
       </div>
     </div>
@@ -38,7 +41,8 @@
       <div class="section">
         <h2 class="section-title">Resumo do Negócio</h2>
         <div class="summary-grid">
-          <div class="summary-card primary-gradient">
+          <div class="summary-card sales-card">
+            <div class="card-gradient"></div>
             <div class="summary-content">
               <div class="summary-icon">
                 <span class="icon">💰</span>
@@ -48,10 +52,12 @@
                 <p class="summary-value">
                   {{ formatCurrency(dashboardSummary.totalSalesValue || 0) }}
                 </p>
+                <p class="summary-change positive">+12.5% vs mês anterior</p>
               </div>
             </div>
           </div>
-          <div class="summary-card success-gradient">
+          <div class="summary-card profit-card">
+            <div class="card-gradient"></div>
             <div class="summary-content">
               <div class="summary-icon">
                 <span class="icon">📈</span>
@@ -61,10 +67,12 @@
                 <p class="summary-value">
                   {{ formatCurrency(dashboardSummary.totalProfit || 0) }}
                 </p>
+                <p class="summary-change positive">+8.3% vs mês anterior</p>
               </div>
             </div>
           </div>
-          <div class="summary-card warning-gradient" @click="navigateToPendingPayments">
+          <div class="summary-card pending-card" @click="navigateToPendingPayments">
+            <div class="card-gradient"></div>
             <div class="summary-content">
               <div class="summary-icon">
                 <span class="icon">⏰</span>
@@ -72,6 +80,7 @@
               <div class="summary-info">
                 <p class="summary-label">Valores a Receber</p>
                 <p class="summary-value">{{ formatCurrency(pendingAmount) }}</p>
+                <p class="summary-change neutral">Clique para ver detalhes</p>
               </div>
               <div class="summary-arrow">
                 <span class="arrow">→</span>
@@ -324,51 +333,92 @@ onActivated(() => {
 <style scoped>
 .dashboard-container {
   flex: 1;
-  background-color: var(--background);
-  padding: var(--space-6);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 1.5rem;
+  min-height: 100vh;
 }
 
 .dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background-color: white;
-  border-bottom: 1px solid var(--gray-200);
-  margin-top: 2rem;
+  padding: 2rem;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+}
+
+.header-content {
+  flex: 1;
 }
 
 .dashboard-title {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 800;
-  color: var(--gray-800);
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #1e293b, #475569);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dashboard-subtitle {
+  font-size: 1rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
-.notification-btn {
+.action-btn {
   position: relative;
-  padding: 0.5rem;
-  background: none;
-  border: none;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
   cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.notification-icon {
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+}
+
+.btn-icon {
   font-size: 1.25rem;
 }
 
 .notification-badge {
   position: absolute;
-  top: 0;
-  right: 0;
-  background-color: var(--danger);
+  top: -0.25rem;
+  right: -0.25rem;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
-  border-radius: 10px;
+  border-radius: 50%;
   min-width: 20px;
   height: 20px;
   display: flex;
@@ -377,14 +427,7 @@ onActivated(() => {
   font-size: 0.625rem;
   font-weight: 700;
   padding: 0 4px;
-}
-
-.menu-btn {
-  padding: 0.5rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.25rem;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
 }
 
 .loading-container {
@@ -447,19 +490,21 @@ onActivated(() => {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-6);
-  margin-bottom: var(--space-8);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .summary-card {
-  border-radius: var(--radius-2xl);
-  padding: var(--space-8);
-  color: white;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all var(--transition-normal);
-  cursor: pointer;
 }
 
 .summary-card::before {
@@ -468,10 +513,9 @@ onActivated(() => {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  height: 4px;
   opacity: 0;
-  transition: opacity var(--transition-normal);
+  transition: opacity 0.3s ease;
 }
 
 .summary-card:hover::before {
@@ -479,66 +523,100 @@ onActivated(() => {
 }
 
 .summary-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: var(--shadow-2xl);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-.primary-gradient {
-  background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
-  box-shadow: var(--shadow-sm);
+.sales-card::before {
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
 }
 
-.success-gradient {
-  background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
-  box-shadow: var(--shadow-sm);
+.profit-card::before {
+  background: linear-gradient(90deg, #10b981, #059669);
 }
 
-.warning-gradient {
-  background: linear-gradient(135deg, var(--secondary-600) 0%, var(--secondary-700) 100%);
-  box-shadow: var(--shadow-sm);
+.pending-card::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.card-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.summary-card:hover .card-gradient {
+  opacity: 1;
 }
 
 .summary-content {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: 1rem;
   position: relative;
   z-index: 1;
 }
 
 .summary-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.2);
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+  flex-shrink: 0;
 }
 
 .summary-icon .icon {
   font-size: 1.5rem;
+  color: white;
 }
 
 .summary-info {
   flex: 1;
+  min-width: 0;
 }
 
 .summary-label {
   font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: var(--space-1);
-  opacity: 0.9;
-  letter-spacing: 0.025em;
+  margin-bottom: 0.25rem;
+  color: #64748b;
   text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
 .summary-value {
   font-size: 1.75rem;
   font-weight: 800;
-  letter-spacing: -0.025em;
+  color: #1e293b;
+  margin-bottom: 0.25rem;
   line-height: 1.2;
+}
+
+.summary-change {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.summary-change.positive {
+  color: #059669;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.summary-change.neutral {
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.1);
 }
 
 .summary-arrow {
