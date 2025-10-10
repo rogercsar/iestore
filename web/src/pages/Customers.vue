@@ -14,7 +14,7 @@
       <div class="summary-card primary-gradient">
         <div class="summary-content">
           <p class="summary-label">Total de Clientes</p>
-          <p class="summary-value">{{ customers.length }}</p>
+          <p class="summary-value">{{ store.customers?.length || 0 }}</p>
         </div>
       </div>
       <div class="summary-card success-gradient">
@@ -64,23 +64,23 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="loading-container">
+    <div v-if="store.loading" class="loading-container">
       <div class="loading-spinner"></div>
     </div>
 
     <!-- Error State -->
-    <div v-if="error" class="error-card">
+    <div v-if="store.error" class="error-card">
       <div class="error-content">
         <span class="error-icon">⚠️</span>
         <div>
           <h3 class="error-title">Erro ao carregar clientes</h3>
-          <p class="error-message">{{ error }}</p>
+          <p class="error-message">{{ store.error }}</p>
         </div>
       </div>
     </div>
 
     <!-- Customers List -->
-    <div v-if="!loading && !error" class="customers-list">
+    <div v-if="!store.loading && !store.error" class="customers-list">
       <div 
         v-for="customer in filteredCustomers" 
         :key="customer.id"
@@ -140,7 +140,7 @@
     </div>
 
     <!-- Empty State -->
-    <div v-if="!loading && !error && filteredCustomers.length === 0" class="empty-state">
+    <div v-if="!store.loading && !store.error && filteredCustomers.length === 0" class="empty-state">
       <div class="empty-card">
         <span class="empty-icon">👥</span>
         <h3 class="empty-title">Nenhum cliente encontrado</h3>
@@ -180,8 +180,8 @@
           </div>
           <div class="modal-actions">
             <button type="button" class="btn btn-secondary" @click="showAddModal = false">Cancelar</button>
-            <button type="submit" class="btn btn-primary" :disabled="loading">
-              {{ loading ? 'Salvando...' : 'Salvar' }}
+            <button type="submit" class="btn btn-primary" :disabled="store.loading">
+              {{ store.loading ? 'Salvando...' : 'Salvar' }}
             </button>
           </div>
         </form>
