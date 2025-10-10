@@ -25,34 +25,37 @@
       </div>
     </div>
 
-    <div class="campaigns-list" v-if="filteredCampaigns.length">
-      <div class="campaign-card" v-for="c in paginatedCampaigns" :key="c.id">
-        <div class="card-header">
-          <div>
-            <h3 class="campaign-name">{{ c.name }}</h3>
-            <p class="campaign-meta">
-              {{ c.promotionIds.length }} promoções • Público: {{ c.audience }} • Canal: {{ c.channel.toUpperCase() }}
-            </p>
-            <p class="campaign-link" v-if="c.publicLink">
-              Link público: <a :href="c.publicLink" target="_blank">{{ c.publicLink }}</a>
-            </p>
-          </div>
-          <div class="campaign-actions">
-            <button class="btn small" @click="copyLink(c)">Copiar link</button>
-            <button class="btn small" @click="startEdit(c)">Editar</button>
-            <button class="btn small danger" @click="removeCampaign(c)">Excluir</button>
+    <template v-if="filteredCampaigns.length">
+      <div class="campaigns-list">
+        <div class="campaign-card" v-for="c in paginatedCampaigns" :key="c.id">
+          <div class="card-header">
+            <div>
+              <h3 class="campaign-name">{{ c.name }}</h3>
+              <p class="campaign-meta">
+                {{ c.promotionIds.length }} promoções • Público: {{ c.audience }} • Canal: {{ c.channel.toUpperCase() }}
+              </p>
+              <p class="campaign-link" v-if="c.publicLink">
+                Link público: <a :href="c.publicLink" target="_blank">{{ c.publicLink }}</a>
+              </p>
+            </div>
+            <div class="campaign-actions">
+              <button class="btn small" @click="copyLink(c)">Copiar link</button>
+              <button class="btn small" @click="startEdit(c)">Editar</button>
+              <button class="btn small danger" @click="removeCampaign(c)">Excluir</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <div v-else class="empty-state">
-      <div class="empty-card">
-        <span class="empty-icon">📣</span>
-        <h3 class="empty-title">Nenhuma campanha cadastrada</h3>
-        <p class="empty-subtitle">Crie sua primeira campanha para divulgar suas promoções</p>
+    </template>
+    <template v-else>
+      <div class="empty-state">
+        <div class="empty-card">
+          <span class="empty-icon">📣</span>
+          <h3 class="empty-title">Nenhuma campanha cadastrada</h3>
+          <p class="empty-subtitle">Crie sua primeira campanha para divulgar suas promoções</p>
+        </div>
       </div>
-    </div>
+    </template>
 
     <div v-if="showModal" class="modal-backdrop" @click.self="closeCreate()">
       <div class="modal">

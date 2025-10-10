@@ -49,53 +49,56 @@
       </div>
     </div>
 
-    <div class="promotions-list" v-if="filteredPromotions.length">
-      <div class="promotion-card" v-for="promo in paginatedPromotions" :key="promo.id">
-        <div class="card-header">
-          <div class="promo-info">
-            <h3 class="promo-name">{{ promo.name }}</h3>
-            <p class="promo-dates">
-              {{ formatDate(promo.startAt) }} → {{ formatDate(promo.endAt) }}
-              <span class="promo-remaining" v-if="promo.status === 'active'">• {{ daysLeft(promo.endAt) }} dias restantes</span>
-            </p>
-          </div>
-          <div class="status-badge" :class="promo.status">
-            {{ statusLabel(promo.status) }}
-          </div>
-        </div>
-        <div class="promo-products">
-          <div class="promo-product" v-for="p in promo.products" :key="p.productId">
-            <div class="price">
-              <span class="original">{{ formatCurrency(p.unitPrice) }}</span>
-              <span class="arrow">→</span>
-              <span class="discounted">{{ formatCurrency(discountPrice(p.unitPrice, promo.discountPercent)) }}</span>
-              <span class="percent">-{{ promo.discountPercent }}%</span>
+    <template v-if="filteredPromotions.length">
+      <div class="promotions-list">
+        <div class="promotion-card" v-for="promo in paginatedPromotions" :key="promo.id">
+          <div class="card-header">
+            <div class="promo-info">
+              <h3 class="promo-name">{{ promo.name }}</h3>
+              <p class="promo-dates">
+                {{ formatDate(promo.startAt) }} → {{ formatDate(promo.endAt) }}
+                <span class="promo-remaining" v-if="computeStatus(promo) === 'active'">• {{ daysLeft(promo.endAt) }} dias restantes</span>
+              </p>
             </div>
-            <div class="name">{{ p.name }}</div>
+            <div class="status-badge" :class="computeStatus(promo)">
+              {{ statusLabel(computeStatus(promo)) }}
+            </div>
+          </div>
+          <div class="promo-products">
+            <div class="promo-product" v-for="p in promo.products" :key="p.productId || p.name">
+              <div class="price">
+                <span class="original">{{ formatCurrency(p.unitPrice) }}</span>
+                <span class="arrow">→</span>
+                <span class="discounted">{{ formatCurrency(discountPrice(p.unitPrice, toNumber(promo.discountPercent))) }}</span>
+                <span class="percent">-{{ toNumber(promo.discountPercent) }}%</span>
+              </div>
+              <div class="name">{{ p.name }}</div>
+            </div>
+          </div>
+          <div class="promo-actions">
+            <button class="btn small" @click="editPromo(promo)">Editar</button>
+            <button class="btn small warn" @click="endPromo(promo)">Encerrar</button>
+            <button class="btn small danger" @click="deletePromo(promo)">Excluir</button>
+            <button class="btn small share" @click="sharePromoWhatsApp(promo)">WhatsApp</button>
+            <button class="btn small share" @click="sharePromoEmail(promo)">Email</button>
           </div>
         </div>
-        <div class="promo-actions">
-          <button class="btn small" @click="editPromo(promo)">Editar</button>
-          <button class="btn small warn" @click="endPromo(promo)">Encerrar</button>
-          <button class="btn small danger" @click="deletePromo(promo)">Excluir</button>
-          <button class="btn small share" @click="sharePromoWhatsApp(promo)">WhatsApp</button>
-          <button class="btn small share" @click="sharePromoEmail(promo)">Email</button>
+      </div>
+      <div v-if="totalPages > 1" class="pagination">
+        <button class="page-btn" :disabled="page===1" @click="page--">Anterior</button>
+        <span class="page-info">{{ page }} / {{ totalPages }}</span>
+        <button class="page-btn" :disabled="page===totalPages" @click="page++">Próxima</button>
+      </div>
+    </template>
+    <template v-else>
+      <div class="empty-state">
+        <div class="empty-card">
+          <span class="empty-icon">🏷️</span>
+          <h3 class="empty-title">Nenhuma promoção cadastrada</h3>
+          <p class="empty-subtitle">Crie sua primeira promoção para destacar seus produtos</p>
         </div>
       </div>
-    </div>
-    <div v-if="totalPages > 1" class="pagination">
-      <button class="page-btn" :disabled="page===1" @click="page--">Anterior</button>
-      <span class="page-info">{{ page }} / {{ totalPages }}</span>
-      <button class="page-btn" :disabled="page===totalPages" @click="page++">Próxima</button>
-    </div>
-
-    <div v-else class="empty-state">
-      <div class="empty-card">
-        <span class="empty-icon">🏷️</span>
-        <h3 class="empty-title">Nenhuma promoção cadastrada</h3>
-        <p class="empty-subtitle">Crie sua primeira promoção para destacar seus produtos</p>
-      </div>
-    </div>
+    </template>
 
     <div v-if="showModal" class="modal-backdrop" @click.self="closeCreate()">
       <div class="modal">
@@ -178,9 +181,21 @@ const form = ref({
   productIds: [] as string[]
 })
 
+const toNumber = (v: any) => typeof v === 'number' ? v : parseFloat(v || '0')
+
+const computeStatus = (p: Promotion): PromotionStatus => {
+  const now = Date.now()
+  const start = new Date(p.startAt).getTime()
+  const end = new Date(p.endAt).getTime()
+  if (isNaN(start) || isNaN(end)) return 'expired'
+  if (now < start) return 'scheduled'
+  if (now > end) return 'expired'
+  return 'active'
+}
+
 const filteredPromotions = computed(() => {
   let list = promotions.value
-  if (statusFilter.value) list = list.filter(p => p.status === statusFilter.value)
+  if (statusFilter.value) list = list.filter(p => computeStatus(p) === statusFilter.value)
   if (search.value) {
     const q = search.value.toLowerCase()
     list = list.filter(p => p.name.toLowerCase().includes(q) || p.products.some(pp => pp.name.toLowerCase().includes(q)))
@@ -189,10 +204,10 @@ const filteredPromotions = computed(() => {
   return [...list].sort((a, b) => {
     switch (sortBy.value) {
       case 'name': return a.name.localeCompare(b.name)
-      case 'discount': return (b.discountPercent||0) - (a.discountPercent||0)
+      case 'discount': return toNumber(b.discountPercent) - toNumber(a.discountPercent)
       case 'start': return new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
       case 'end': return new Date(a.endAt).getTime() - new Date(b.endAt).getTime()
-      case 'status': return (a.status||'').localeCompare(b.status||'')
+      case 'status': return computeStatus(a).localeCompare(computeStatus(b))
       default: return new Date(b.startAt).getTime() - new Date(a.startAt).getTime()
     }
   })
