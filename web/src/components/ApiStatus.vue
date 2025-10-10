@@ -11,8 +11,8 @@
       <div class="space-y-4">
         <div class="flex justify-between items-center">
           <span>Modo de dados:</span>
-          <span :class="useMockData ? 'text-yellow-600' : 'text-green-600'">
-            {{ useMockData ? 'Mock Data' : 'Google Sheets' }}
+          <span class="text-green-600">
+            PostgreSQL Database
           </span>
         </div>
         
@@ -38,8 +38,8 @@
           <button class="btn btn-sm" @click="testConnection">
             🔄 Testar Conexão
           </button>
-          <button class="btn btn-sm" @click="toggleMockData">
-            {{ useMockData ? '📊 Usar API Real' : '🎭 Usar Mock Data' }}
+          <button class="btn btn-sm" @click="testDatabaseConnection">
+            🗄️ Testar Banco de Dados
           </button>
         </div>
       </div>
@@ -51,7 +51,6 @@
 import { ref, onMounted } from 'vue'
 import { environment } from '../config/environment'
 
-const useMockData = ref(environment.useMockData)
 const apiBaseUrl = ref(environment.apiBaseUrl)
 const connectionStatus = ref<'connected' | 'disconnected' | 'testing'>('testing')
 const lastError = ref<string | null>(null)
@@ -60,13 +59,8 @@ const testConnection = async () => {
   connectionStatus.value = 'testing'
   lastError.value = null
   
-  if (useMockData.value) {
-    connectionStatus.value = 'connected'
-    return
-  }
-  
   try {
-    console.log('Testing API connection...')
+    console.log('Testing Netlify functions connection...')
     const response = await fetch('/.netlify/functions/test')
     
     // Check if we got HTML instead of JSON (local development)
@@ -92,12 +86,27 @@ const testConnection = async () => {
   }
 }
 
-const toggleMockData = () => {
-  useMockData.value = !useMockData.value
-  environment.useMockData = useMockData.value
-  environment.features.enableMockData = useMockData.value
-  environment.features.enableGoogleSheets = !useMockData.value
-  console.log('Mock data toggled:', useMockData.value)
+const testDatabaseConnection = async () => {
+  connectionStatus.value = 'testing'
+  lastError.value = null
+  
+  try {
+    console.log('Testing PostgreSQL database connection...')
+    const response = await fetch('/.netlify/functions/postgres?table=customers')
+    
+    if (response.ok) {
+      const data = await response.json()
+      console.log('✅ Database connection successful:', data)
+      connectionStatus.value = 'connected'
+      lastError.value = null
+    } else {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+  } catch (error) {
+    console.error('❌ Database connection failed:', error)
+    connectionStatus.value = 'disconnected'
+    lastError.value = error instanceof Error ? error.message : 'Database connection failed'
+  }
 }
 
 onMounted(() => {
