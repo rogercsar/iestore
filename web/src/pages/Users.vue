@@ -148,11 +148,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAppStore } from '../stores/app'
 import Card from '../components/Card.vue'
 
 const router = useRouter()
-const store = useAppStore()
 
 interface User {
   id: string
@@ -179,11 +177,13 @@ const goBack = () => {
 const loadUsers = async () => {
   loading.value = true
   try {
-    // Load real customers data from store
-    await store.fetchCustomers()
-    users.value = store.customers || []
+    const res = await fetch('/.netlify/functions/postgres?table=users')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    users.value = Array.isArray(data) ? data : []
   } catch (error) {
-    console.error('Error loading users:', error)
+    console.warn('Users API unavailable or empty. Showing empty list.', error)
+    users.value = []
   } finally {
     loading.value = false
   }
@@ -197,23 +197,36 @@ const handleAddUser = async () => {
 
   loading.value = true
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
     const user: User = {
-      id: Date.now().toString(),
+      id: `user_${Date.now()}`,
       name: newUser.value.name.trim(),
       email: newUser.value.email.trim(),
       role: newUser.value.role,
       status: 'active'
     }
-
-    users.value.push(user)
+    // Persist via Netlify Function (append)
+    const res = await fetch('/.netlify/functions/postgres?table=users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'append', data: [user] })
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    await loadUsers()
     newUser.value = { name: '', email: '', password: '', role: 'user' }
     showAddForm.value = false
     alert('Usuário criado com sucesso!')
   } catch (error) {
-    alert('Falha ao criar usuário')
+    console.error('Falha ao criar usuário na API. Mantendo localmente.', error)
+    // Fallback local (não persistente)
+    users.value.push({
+      id: `user_${Date.now()}`,
+      name: newUser.value.name.trim(),
+      email: newUser.value.email.trim(),
+      role: newUser.value.role,
+      status: 'active'
+    })
+    newUser.value = { name: '', email: '', password: '', role: 'user' }
+    showAddForm.value = false
   } finally {
     loading.value = false
   }
@@ -221,16 +234,36 @@ const handleAddUser = async () => {
 
 const handleToggleUserStatus = async (userId: string) => {
   const user = users.value.find(u => u.id === userId)
-  if (user) {
-    user.status = user.status === 'active' ? 'inactive' : 'active'
-    // In real app, this would call API to update user status
+  if (!user) return
+  const newStatus = user.status === 'active' ? 'inactive' : 'active'
+  user.status = newStatus
+  // Persist via API (overwrite)
+  try {
+    const res = await fetch('/.netlify/functions/postgres?table=users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'overwrite', id: userId, data: { status: newStatus } })
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  } catch (e) {
+    console.warn('Falha ao atualizar status na API. Estado apenas local.', e)
   }
 }
 
 const handleDeleteUser = (userId: string) => {
-  if (confirm('Tem certeza que deseja excluir este usuário?')) {
-    users.value = users.value.filter(user => user.id !== userId)
-    // In real app, this would call API to delete user
+  if (!confirm('Tem certeza que deseja excluir este usuário?')) return
+  const prev = users.value
+  users.value = users.value.filter(user => user.id !== userId)
+  try {
+    const res = await fetch('/.netlify/functions/postgres?table=users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', id: userId })
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  } catch (e) {
+    console.warn('Falha ao excluir na API. Revertendo local.', e)
+    users.value = prev
   }
 }
 

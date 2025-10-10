@@ -56,6 +56,10 @@ export const handler: Handler = async (event, context) => {
           return await handleCustomers(event, client, headers, action);
         case 'sales':
           return await handleSales(event, client, headers, action);
+        case 'users':
+          await ensureUsersTable(client);
+          await ensureAdminUser(client);
+          return await handleUsers(event, client, headers);
         case 'promotions':
           await ensurePromotionsTable(client);
           return await handlePromotions(event, client, headers);
@@ -174,6 +178,25 @@ async function ensureCampaignsTable(client: any) {
   `);
 }
 
+async function ensureUsersTable(client: any) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id text PRIMARY KEY,
+      name text NOT NULL,
+      email text NOT NULL,
+      username text UNIQUE,
+      password text,
+      role text NOT NULL DEFAULT 'user',
+      status text NOT NULL DEFAULT 'active',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  // add columns if missing (idempotent)
+  await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username text UNIQUE`);
+  await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password text`);
+}
+
 async function handlePromotions(event: any, client: any, headers: any) {
   if (event.httpMethod === 'GET') {
     const result = await client.query(`
@@ -248,6 +271,88 @@ async function handleCampaigns(event: any, client: any, headers: any) {
     return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
   }
   return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+}
+
+async function handleUsers(event: any, client: any, headers: any) {
+  if (event.httpMethod === 'GET') {
+    const result = await client.query(`
+      SELECT id, name, email, username, role, status
+      FROM users
+      ORDER BY created_at DESC
+    `);
+    return { statusCode: 200, headers, body: JSON.stringify(result.rows) };
+  } else if (event.httpMethod === 'POST') {
+    const body = JSON.parse(event.body || '{}');
+    // Accept both { action, data } and { mode, rows }
+    const action = body.action || body.mode;
+    const data = body.data || body.rows;
+    if (action === 'append' && Array.isArray(data) && data.length > 0) {
+      const u = data[0];
+      await client.query(
+        `INSERT INTO users (id, name, email, username, password, role, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           email = EXCLUDED.email,
+           username = COALESCE(EXCLUDED.username, users.username),
+           password = COALESCE(EXCLUDED.password, users.password),
+           role = EXCLUDED.role,
+           status = EXCLUDED.status,
+           updated_at = CURRENT_TIMESTAMP`,
+        [u.id, u.name, u.email, u.username || null, u.password || null, u.role || 'user', u.status || 'active']
+      );
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+    }
+    if (action === 'overwrite' && body.id) {
+      // Partial update by id
+      const id = body.id;
+      const patch = data || {};
+      const fields: string[] = [];
+      const values: any[] = [];
+      let idx = 1;
+      if (typeof patch.name === 'string') { fields.push(`name = $${++idx}`); values.push(patch.name); }
+      if (typeof patch.email === 'string') { fields.push(`email = $${++idx}`); values.push(patch.email); }
+      if (typeof patch.username === 'string') { fields.push(`username = $${++idx}`); values.push(patch.username); }
+      if (typeof patch.password === 'string') { fields.push(`password = $${++idx}`); values.push(patch.password); }
+      if (typeof patch.role === 'string') { fields.push(`role = $${++idx}`); values.push(patch.role); }
+      if (typeof patch.status === 'string') { fields.push(`status = $${++idx}`); values.push(patch.status); }
+      if (fields.length > 0) {
+        await client.query(
+          `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [id, ...values]
+        );
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+    }
+    if (action === 'delete' && body.id) {
+      await client.query(`DELETE FROM users WHERE id = $1`, [body.id]);
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+    }
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid users action' }) };
+  }
+  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+}
+
+async function ensureAdminUser(client: any) {
+  // Seed admin user if username not present
+  const username = 'adiestore';
+  const password = 'Admin@iestore1';
+  const check = await client.query(`SELECT 1 FROM users WHERE username = $1 LIMIT 1`, [username]);
+  if (check.rowCount && check.rowCount > 0) return;
+  await client.query(
+    `INSERT INTO users (id, name, email, username, password, role, status)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      'user_admin_adistore',
+      'Admin IEStore',
+      'admin@iestore.local',
+      username,
+      password,
+      'admin',
+      'active'
+    ]
+  );
 }
 
 async function handleCustomers(event: any, client: any, headers: any, action: string) {
