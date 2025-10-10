@@ -310,6 +310,27 @@ class ApiService {
     return Array.isArray(result) && result[0] ? { ...promotion, id: result[0].id } : promotion
   }
 
+  async updatePromotion(id: string, updates: Partial<Promotion>): Promise<void> {
+    const rows = await this.getPromotions()
+    const idx = rows.findIndex(r => r.id === id)
+    if (idx !== -1) {
+      rows[idx] = { ...rows[idx], ...updates }
+      await this.request('promotions', {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'overwrite', rows })
+      })
+    }
+  }
+
+  async deletePromotion(id: string): Promise<void> {
+    const rows = await this.getPromotions()
+    const filtered = rows.filter(r => r.id !== id)
+    await this.request('promotions', {
+      method: 'POST',
+      body: JSON.stringify({ mode: 'overwrite', rows: filtered })
+    })
+  }
+
   // Campaigns
   async getCampaigns(): Promise<Campaign[]> {
     const data = await this.request<any>('campaigns')
@@ -341,6 +362,27 @@ class ApiService {
     const id = Array.isArray(result) && result[0] ? result[0].id : campaign.id
     const publicId = Array.isArray(result) && result[0] ? (result[0].publicId || payload.rows[0].publicId) : payload.rows[0].publicId
     return { ...campaign, id, publicId }
+  }
+
+  async updateCampaign(id: string, updates: Partial<Campaign>): Promise<void> {
+    const rows = await this.getCampaigns()
+    const idx = rows.findIndex(r => r.id === id)
+    if (idx !== -1) {
+      rows[idx] = { ...rows[idx], ...updates }
+      await this.request('campaigns', {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'overwrite', rows })
+      })
+    }
+  }
+
+  async deleteCampaign(id: string): Promise<void> {
+    const rows = await this.getCampaigns()
+    const filtered = rows.filter(r => r.id !== id)
+    await this.request('campaigns', {
+      method: 'POST',
+      body: JSON.stringify({ mode: 'overwrite', rows: filtered })
+    })
   }
 
   // Dashboard

@@ -14,6 +14,9 @@
     <div class="filters-card">
       <div class="filters-row">
         <div class="filter-group">
+          <input class="filter-input" v-model="search" placeholder="Buscar por nome da promoção ou produto..." />
+        </div>
+        <div class="filter-group">
           <select class="filter-select" v-model="statusFilter">
             <option value="">Todas</option>
             <option value="active">Ativas</option>
@@ -21,11 +24,31 @@
             <option value="expired">Encerradas</option>
           </select>
         </div>
+        <div class="filter-group">
+          <select class="filter-select" v-model="sortBy">
+            <option value="recent">Mais recentes</option>
+            <option value="name">Nome</option>
+            <option value="discount">Desconto</option>
+            <option value="start">Início</option>
+            <option value="end">Fim</option>
+            <option value="status">Status</option>
+          </select>
+        </div>
+        <div class="filter-group small">
+          <select class="filter-select" v-model.number="pageSize">
+            <option :value="5">5</option>
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <button class="btn small" @click="exportCSV">Exportar CSV</button>
+        </div>
       </div>
     </div>
 
     <div class="promotions-list" v-if="promotions.length">
-      <div class="promotion-card" v-for="promo in filteredPromotions" :key="promo.id">
+      <div class="promotion-card" v-for="promo in paginatedPromotions" :key="promo.id">
         <div class="card-header">
           <div class="promo-info">
             <h3 class="promo-name">{{ promo.name }}</h3>
@@ -49,7 +72,19 @@
             <div class="name">{{ p.name }}</div>
           </div>
         </div>
+        <div class="promo-actions">
+          <button class="btn small" @click="editPromo(promo)">Editar</button>
+          <button class="btn small warn" @click="endPromo(promo)">Encerrar</button>
+          <button class="btn small danger" @click="deletePromo(promo)">Excluir</button>
+          <button class="btn small share" @click="sharePromoWhatsApp(promo)">WhatsApp</button>
+          <button class="btn small share" @click="sharePromoEmail(promo)">Email</button>
+        </div>
       </div>
+    </div>
+    <div v-if="totalPages > 1" class="pagination">
+      <button class="page-btn" :disabled="page===1" @click="page--">Anterior</button>
+      <span class="page-info">{{ page }} / {{ totalPages }}</span>
+      <button class="page-btn" :disabled="page===totalPages" @click="page++">Próxima</button>
     </div>
 
     <div v-else class="empty-state">
@@ -126,8 +161,13 @@ const products = computed<Product[]>(() => store.products || [])
 
 const promotions = ref<Promotion[]>([])
 const statusFilter = ref('')
+const search = ref('')
+const page = ref(1)
+const pageSize = ref(10)
+const sortBy = ref<'recent'|'name'|'discount'|'start'|'end'|'status'>('recent')
 const showModal = ref(false)
 
+const isEditing = ref<null | string>(null)
 const form = ref({
   name: '',
   discountPercent: 10,
@@ -137,8 +177,30 @@ const form = ref({
 })
 
 const filteredPromotions = computed(() => {
-  if (!statusFilter.value) return promotions.value
-  return promotions.value.filter(p => p.status === statusFilter.value)
+  let list = promotions.value
+  if (statusFilter.value) list = list.filter(p => p.status === statusFilter.value)
+  if (search.value) {
+    const q = search.value.toLowerCase()
+    list = list.filter(p => p.name.toLowerCase().includes(q) || p.products.some(pp => pp.name.toLowerCase().includes(q)))
+  }
+  // sort
+  return [...list].sort((a, b) => {
+    switch (sortBy.value) {
+      case 'name': return a.name.localeCompare(b.name)
+      case 'discount': return (b.discountPercent||0) - (a.discountPercent||0)
+      case 'start': return new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+      case 'end': return new Date(a.endAt).getTime() - new Date(b.endAt).getTime()
+      case 'status': return (a.status||'').localeCompare(b.status||'')
+      default: return new Date(b.startAt).getTime() - new Date(a.startAt).getTime()
+    }
+  })
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredPromotions.value.length / pageSize.value)))
+const paginatedPromotions = computed(() => {
+  if (page.value > totalPages.value) page.value = totalPages.value
+  const start = (page.value - 1) * pageSize.value
+  return filteredPromotions.value.slice(start, start + pageSize.value)
 })
 
 const openCreate = () => {
@@ -175,10 +237,90 @@ const createPromotion = async () => {
     status: new Date(form.value.startAt) > new Date() ? 'scheduled' : (new Date(form.value.endAt) < new Date() ? 'expired' : 'active'),
     products: selected
   }
-  await store.createPromotion(promo)
+  if (isEditing.value) {
+    await store.updatePromotion(isEditing.value, promo)
+  } else {
+    await store.createPromotion(promo)
+  }
   await store.fetchPromotions()
   promotions.value = store.promotions || []
   showModal.value = false
+  isEditing.value = null
+}
+
+const editPromo = (promo: Promotion) => {
+  showModal.value = true
+  isEditing.value = promo.id || null
+  form.value = {
+    name: promo.name,
+    discountPercent: promo.discountPercent,
+    startAt: promo.startAt.slice(0,16),
+    endAt: promo.endAt.slice(0,16),
+    productIds: promo.products.map(p => p.productId)
+  }
+  // On submit, we could detect edit mode; for simplicity, keep create-only UI now
+}
+
+const endPromo = async (promo: Promotion) => {
+  if (!promo.id) return
+  if (confirm('Encerrar esta promoção agora?')) {
+    await store.endPromotion(promo.id)
+    await store.fetchPromotions()
+    promotions.value = store.promotions || []
+  }
+}
+
+const deletePromo = async (promo: Promotion) => {
+  if (!promo.id) return
+  if (confirm('Excluir esta promoção? Esta ação não pode ser desfeita.')) {
+    await store.deletePromotion(promo.id)
+    await store.fetchPromotions()
+    promotions.value = store.promotions || []
+  }
+}
+
+const sharePromoWhatsApp = (promo: Promotion) => {
+  const msgLines = [
+    `🏷️ ${promo.name} (-${promo.discountPercent}%)`,
+    ...promo.products.slice(0,5).map(p => `• ${p.name}: de ${formatCurrency(p.unitPrice)} por ${formatCurrency(discountPrice(p.unitPrice, promo.discountPercent))}`),
+    `Válida até: ${formatDate(promo.endAt)}`
+  ]
+  const text = msgLines.join('\n')
+  const phone = prompt('Número do WhatsApp com DDI e DDD (opcional):\nEx: 5565999999999')
+  const base = phone && phone.trim() ? `https://wa.me/${phone.trim()}` : 'https://wa.me/'
+  const url = `${base}?text=${encodeURIComponent(text)}`
+  window.open(url, '_blank')
+}
+
+const sharePromoEmail = (promo: Promotion) => {
+  const subject = `Promoção: ${promo.name}`
+  const body = `Olá,\n\nConfira nossa promoção ${promo.name} (-${promo.discountPercent}%):\n\n` +
+    promo.products.map(p => `• ${p.name}: de ${formatCurrency(p.unitPrice)} por ${formatCurrency(discountPrice(p.unitPrice, promo.discountPercent))}`).join('\n') +
+    `\n\nVálida até: ${formatDate(promo.endAt)}\n\n` +
+    `Acesse nossa campanha: ${window.location.origin}/promotions`
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
+
+const exportCSV = () => {
+  const rows = filteredPromotions.value.flatMap(p => p.products.map(pp => ({
+    promocao: p.name,
+    desconto_percent: p.discountPercent,
+    inicio: p.startAt,
+    fim: p.endAt,
+    status: p.status,
+    produto: pp.name,
+    preco_original: pp.unitPrice,
+    preco_promocional: discountPrice(pp.unitPrice, p.discountPercent)
+  })))
+  const header = Object.keys(rows[0] || {promocao:'',desconto_percent:'',inicio:'',fim:'',status:'',produto:'',preco_original:'',preco_promocional:''})
+  const csv = [header.join(','), ...rows.map(r => header.map(k => JSON.stringify((r as any)[k] ?? '')).join(','))].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `promocoes_${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 onMounted(async () => {
@@ -198,6 +340,7 @@ onMounted(async () => {
 .filters-card { background:linear-gradient(145deg,#fff,#f8fafc); border:1px solid rgba(226,232,240,.8); border-radius:16px; padding:1.5rem; margin-bottom:2rem; }
 .filters-row { display:flex; gap:1rem; }
 .filter-select { padding:.5rem .75rem; border:1px solid #e2e8f0; border-radius:.5rem; }
+.filter-input { padding:.5rem .75rem; border:1px solid #e2e8f0; border-radius:.5rem; min-width:240px; }
 .promotions-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1rem; }
 .promotion-card { background:linear-gradient(145deg,#fff,#f8fafc); border:1px solid rgba(226,232,240,.8); border-radius:16px; padding:1rem; }
 .card-header { display:flex; align-items:flex-start; justify-content:space-between; }
@@ -212,6 +355,14 @@ onMounted(async () => {
 .original { text-decoration:line-through; color:#64748b; }
 .discounted { color:#059669; font-weight:800; }
 .percent { color:#10b981; font-weight:700; }
+.promo-actions { display:flex; gap:.5rem; justify-content:flex-end; margin-top:.75rem; }
+.btn.small { padding:.375rem .75rem; border:none; border-radius:.5rem; background:#e2e8f0; cursor:pointer; }
+.btn.small.warn { background:#f59e0b; color:#fff; }
+.btn.small.danger { background:#ef4444; color:#fff; }
+.btn.small.share { background:#22c55e; color:#fff; }
+.pagination { display:flex; align-items:center; justify-content:center; gap:.75rem; margin-top:1rem; }
+.page-btn { padding:.375rem .75rem; border:none; border-radius:.5rem; background:#e2e8f0; cursor:pointer; }
+.page-info { color:#64748b; font-weight:600; }
 .empty-state { display:flex; justify-content:center; padding:3rem; }
 .empty-card { text-align:center; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:2rem; }
 .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.4); display:flex; align-items:center; justify-content:center; }

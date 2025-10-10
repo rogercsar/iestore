@@ -11,8 +11,20 @@
       </button>
     </div>
 
+    <div class="filters-card">
+      <div class="filters-row">
+        <input class="filter-input" v-model="search" placeholder="Buscar campanha..." />
+        <select class="filter-select" v-model.number="pageSize">
+          <option :value="5">5</option>
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+        </select>
+        <button class="btn small" @click="exportCSV">Exportar CSV</button>
+      </div>
+    </div>
+
     <div class="campaigns-list" v-if="campaigns.length">
-      <div class="campaign-card" v-for="c in campaigns" :key="c.id">
+      <div class="campaign-card" v-for="c in paginatedCampaigns" :key="c.id">
         <div class="card-header">
           <div>
             <h3 class="campaign-name">{{ c.name }}</h3>
@@ -22,6 +34,11 @@
             <p class="campaign-link" v-if="c.publicLink">
               Link público: <a :href="c.publicLink" target="_blank">{{ c.publicLink }}</a>
             </p>
+          </div>
+          <div class="campaign-actions">
+            <button class="btn small" @click="copyLink(c)">Copiar link</button>
+            <button class="btn small" @click="startEdit(c)">Editar</button>
+            <button class="btn small danger" @click="removeCampaign(c)">Excluir</button>
           </div>
         </div>
       </div>
@@ -78,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
 
@@ -96,9 +113,13 @@ interface PromotionRef { id: string; name: string }
 const router = useRouter()
 const store = useAppStore()
 const campaigns = ref<Campaign[]>([])
+const search = ref('')
+const page = ref(1)
+const pageSize = ref(10)
 const promotions = ref<PromotionRef[]>([])
 const showModal = ref(false)
 
+const isEditing = ref<null | string>(null)
 const form = ref({
   name: '',
   promotionIds: [] as string[],
@@ -112,17 +133,27 @@ const closeCreate = () => { showModal.value = false }
 const createCampaign = async () => {
   const id = `camp_${Date.now()}`
   const link = `${window.location.origin}/public/campaign/${id}`
-  await store.createCampaign({
-    id,
-    name: form.value.name,
-    promotionIds: [...form.value.promotionIds],
-    audience: form.value.audience,
-    channel: form.value.channel,
-    publicId: id
-  })
+  if (isEditing.value) {
+    await store.updateCampaign(isEditing.value, {
+      name: form.value.name,
+      promotionIds: [...form.value.promotionIds],
+      audience: form.value.audience,
+      channel: form.value.channel
+    })
+  } else {
+    await store.createCampaign({
+      id,
+      name: form.value.name,
+      promotionIds: [...form.value.promotionIds],
+      audience: form.value.audience,
+      channel: form.value.channel,
+      publicId: id
+    })
+  }
   await store.fetchCampaigns()
   campaigns.value = store.campaigns || []
   showModal.value = false
+  isEditing.value = null
 }
 
 onMounted(() => {
@@ -133,6 +164,66 @@ onMounted(() => {
     campaigns.value = store.campaigns || []
   })
 })
+
+const copyLink = (c: Campaign) => {
+  const link = c.publicLink || `${window.location.origin}/public/campaign/${c.publicId || c.id}`
+  navigator.clipboard.writeText(link).then(() => {
+    alert('Link copiado para a área de transferência!')
+  })
+}
+
+const filteredCampaigns = computed(() => {
+  if (!search.value) return campaigns.value
+  const q = search.value.toLowerCase()
+  return campaigns.value.filter(c => c.name.toLowerCase().includes(q))
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredCampaigns.value.length / pageSize.value)))
+const paginatedCampaigns = computed(() => {
+  if (page.value > totalPages.value) page.value = totalPages.value
+  const start = (page.value - 1) * pageSize.value
+  return filteredCampaigns.value.slice(start, start + pageSize.value)
+})
+
+const startEdit = (c: Campaign) => {
+  isEditing.value = c.id || null
+  form.value = {
+    name: c.name,
+    promotionIds: [...c.promotionIds],
+    audience: c.audience,
+    channel: c.channel
+  }
+  showModal.value = true
+}
+
+const removeCampaign = async (c: Campaign) => {
+  if (!c.id) return
+  if (confirm('Excluir esta campanha? Esta ação não pode ser desfeita.')) {
+    await store.deleteCampaign(c.id)
+    await store.fetchCampaigns()
+    campaigns.value = store.campaigns || []
+  }
+}
+
+const exportCSV = () => {
+  const rows = filteredCampaigns.value.map(c => ({
+    id: c.id,
+    nome: c.name,
+    promocoes: c.promotionIds.join('|'),
+    publico: c.audience,
+    canal: c.channel,
+    link: `${window.location.origin}/public/campaign/${c.publicId || c.id}`
+  }))
+  const header = Object.keys(rows[0] || {id:'',nome:'',promocoes:'',publico:'',canal:'',link:''})
+  const csv = [header.join(','), ...rows.map(r => header.map(k => JSON.stringify((r as any)[k] ?? '')).join(','))].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `campanhas_${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <style scoped>
@@ -141,12 +232,20 @@ onMounted(() => {
 .campaigns-title { font-size:2rem; font-weight:800; color:#1e293b; margin-bottom:.5rem; }
 .campaigns-subtitle { color:#64748b; }
 .add-button { display:flex; align-items:center; gap:.75rem; background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; border:none; border-radius:12px; padding:.875rem 1.5rem; font-weight:600; cursor:pointer; box-shadow:0 2px 4px rgba(139,92,246,.3); }
+.filters-card { background:linear-gradient(145deg,#fff,#f8fafc); border:1px solid rgba(226,232,240,.8); border-radius:16px; padding:1rem; margin-bottom:1rem; }
+.filters-row { display:flex; gap:1rem; align-items:center; }
+.filter-input, .filter-select { padding:.5rem .75rem; border:1px solid #e2e8f0; border-radius:.5rem; }
 .campaigns-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1rem; }
 .campaign-card { background:linear-gradient(145deg,#fff,#f8fafc); border:1px solid rgba(226,232,240,.8); border-radius:16px; padding:1rem; }
 .card-header { display:flex; align-items:flex-start; justify-content:space-between; }
 .campaign-name { font-weight:800; color:#1e293b; }
 .campaign-meta { color:#64748b; font-size:.875rem; }
 .campaign-link a { color:#2563eb; text-decoration:underline; }
+.campaign-actions { display:flex; align-items:center; gap:.5rem; }
+.btn.small { padding:.375rem .75rem; border:none; border-radius:.5rem; background:#e2e8f0; cursor:pointer; }
+.pagination { display:flex; align-items:center; justify-content:center; gap:.75rem; margin-top:1rem; }
+.page-btn { padding:.375rem .75rem; border:none; border-radius:.5rem; background:#e2e8f0; cursor:pointer; }
+.page-info { color:#64748b; font-weight:600; }
 .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.4); display:flex; align-items:center; justify-content:center; }
 .modal { background:#fff; border-radius:12px; padding:1.5rem; width:min(720px,96vw); }
 .modal-title { font-weight:800; color:#1e293b; margin-bottom:1rem; }

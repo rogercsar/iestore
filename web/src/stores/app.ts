@@ -235,12 +235,33 @@ export const useAppStore = defineStore('app', () => {
       promotions.value.unshift(created)
       try { localStorage.setItem('promotions', JSON.stringify(promotions.value)) } catch {}
     },
+    async updatePromotion(id: string, updates: Partial<Promotion>) {
+      await apiService.updatePromotion(id, updates)
+      await this.fetchPromotions()
+    },
+    async endPromotion(id: string) {
+      // set endAt to now
+      await apiService.updatePromotion(id, { endAt: new Date().toISOString() } as any)
+      await this.fetchPromotions()
+    },
+    async deletePromotion(id: string) {
+      await apiService.deletePromotion(id)
+      await this.fetchPromotions()
+    },
     async fetchCampaigns() {
       campaigns.value = await apiService.getCampaigns()
     },
     async createCampaign(campaign: Campaign) {
       const created = await apiService.createCampaign(campaign)
       campaigns.value.unshift(created)
+    },
+    async updateCampaign(id: string, updates: Partial<Campaign>) {
+      await apiService.updateCampaign(id, updates)
+      await this.fetchCampaigns()
+    },
+    async deleteCampaign(id: string) {
+      await apiService.deleteCampaign(id)
+      await this.fetchCampaigns()
     },
     fetchDashboardSummary,
     initializeData

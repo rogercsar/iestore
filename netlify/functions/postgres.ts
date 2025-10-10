@@ -56,6 +56,12 @@ export const handler: Handler = async (event, context) => {
           return await handleCustomers(event, client, headers, action);
         case 'sales':
           return await handleSales(event, client, headers, action);
+        case 'promotions':
+          await ensurePromotionsTable(client);
+          return await handlePromotions(event, client, headers);
+        case 'campaigns':
+          await ensureCampaignsTable(client);
+          return await handleCampaigns(event, client, headers);
         case 'dashboard':
           return await handleDashboard(event, client, headers);
         default:
@@ -136,6 +142,112 @@ async function handleProducts(event: any, client: any, headers: any, action: str
     headers,
     body: JSON.stringify({ error: 'Method not allowed' }),
   };
+}
+
+async function ensurePromotionsTable(client: any) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS promotions (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "name" text NOT NULL,
+      "discountPercent" numeric NOT NULL,
+      "startAt" timestamptz NOT NULL,
+      "endAt" timestamptz NOT NULL,
+      "products" jsonb NOT NULL DEFAULT '[]',
+      "createdAt" timestamptz NOT NULL DEFAULT now(),
+      "updatedAt" timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+}
+
+async function ensureCampaignsTable(client: any) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS campaigns (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "name" text NOT NULL,
+      "promotionIds" jsonb NOT NULL DEFAULT '[]',
+      "audience" text NOT NULL DEFAULT 'todos',
+      "channel" text NOT NULL,
+      "publicId" text UNIQUE,
+      "createdAt" timestamptz NOT NULL DEFAULT now(),
+      "updatedAt" timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+}
+
+async function handlePromotions(event: any, client: any, headers: any) {
+  if (event.httpMethod === 'GET') {
+    const result = await client.query(`
+      SELECT 
+        "id", 
+        "name", 
+        "discountPercent", 
+        "startAt", 
+        "endAt", 
+        "products"
+      FROM promotions
+      ORDER BY "startAt" DESC
+    `);
+    return { statusCode: 200, headers, body: JSON.stringify(result.rows) };
+  } else if (event.httpMethod === 'POST') {
+    const body = JSON.parse(event.body || '{}');
+    const { mode, rows } = body;
+    if (mode === 'append' && rows && rows.length > 0) {
+      const p = rows[0];
+      await client.query(`
+        INSERT INTO promotions ("name","discountPercent","startAt","endAt","products")
+        VALUES ($1,$2,$3,$4,$5)
+      `, [p.name, p.discountPercent, p.startAt, p.endAt, JSON.stringify(p.products || [])]);
+    } else if (mode === 'overwrite' && rows) {
+      await client.query('DELETE FROM promotions');
+      for (const p of rows) {
+        await client.query(`
+          INSERT INTO promotions ("name","discountPercent","startAt","endAt","products")
+          VALUES ($1,$2,$3,$4,$5)
+        `, [p.name, p.discountPercent, p.startAt, p.endAt, JSON.stringify(p.products || [])]);
+      }
+    }
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+  }
+  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+}
+
+async function handleCampaigns(event: any, client: any, headers: any) {
+  if (event.httpMethod === 'GET') {
+    const result = await client.query(`
+      SELECT 
+        "id",
+        "name",
+        "promotionIds",
+        "audience",
+        "channel",
+        "publicId"
+      FROM campaigns
+      ORDER BY "createdAt" DESC
+    `);
+    return { statusCode: 200, headers, body: JSON.stringify(result.rows) };
+  } else if (event.httpMethod === 'POST') {
+    const body = JSON.parse(event.body || '{}');
+    const { mode, rows } = body;
+    if (mode === 'append' && rows && rows.length > 0) {
+      const c = rows[0];
+      await client.query(`
+        INSERT INTO campaigns ("name","promotionIds","audience","channel","publicId")
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT ("publicId") DO NOTHING
+      `, [c.name, JSON.stringify(c.promotionIds || []), c.audience || 'todos', c.channel || 'whatsapp', c.publicId || null]);
+    } else if (mode === 'overwrite' && rows) {
+      await client.query('DELETE FROM campaigns');
+      for (const c of rows) {
+        await client.query(`
+          INSERT INTO campaigns ("name","promotionIds","audience","channel","publicId")
+          VALUES ($1,$2,$3,$4,$5)
+          ON CONFLICT ("publicId") DO NOTHING
+        `, [c.name, JSON.stringify(c.promotionIds || []), c.audience || 'todos', c.channel || 'whatsapp', c.publicId || null]);
+      }
+    }
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+  }
+  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 }
 
 async function handleCustomers(event: any, client: any, headers: any, action: string) {
