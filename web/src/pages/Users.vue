@@ -138,7 +138,11 @@
                 <button type="button" class="remove-photo" @click="removePhoto">Remover</button>
               </div>
               <div v-else class="photo-input-row">
-                <input type="file" accept="image/*" @change="onPhotoChange" />
+                <input type="file" accept="image/*" @change="onPhotoChange" :disabled="uploadInProgress" />
+                <div v-if="uploadInProgress" class="upload-progress">
+                  <div class="spinner"></div>
+                  <span>Enviando foto...</span>
+                </div>
               </div>
             </div>
           </div>
@@ -290,16 +294,26 @@ const handleAddUser = async () => {
     const file = fileEl?.files?.[0] || null
     if (file) {
       uploadInProgress.value = true
-      const reader = new FileReader()
-      const dataUrl: string = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(String(reader.result))
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
-      const up = await fetch('/.netlify/functions/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) })
-      const upJson = await up.json()
-      if (up.ok && upJson.url) activeUser.value.photo = upJson.url
-      uploadInProgress.value = false
+      try {
+        const reader = new FileReader()
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(String(reader.result))
+          reader.onerror = () => reject(reader.error)
+          reader.readAsDataURL(file)
+        })
+        const up = await fetch('/.netlify/functions/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) })
+        const upJson = await up.json()
+        if (up.ok && upJson.url) {
+          activeUser.value.photo = upJson.url
+        } else {
+          alert('Erro ao enviar foto: ' + (upJson.error || 'Erro desconhecido'))
+        }
+      } catch (error) {
+        console.error('Erro no upload:', error)
+        alert('Erro ao enviar foto. Tente novamente.')
+      } finally {
+        uploadInProgress.value = false
+      }
     }
 
     const res = await fetch('/.netlify/functions/postgres?table=users', {
@@ -389,16 +403,26 @@ const handleUpdateUser = async () => {
     const file = fileEl?.files?.[0] || null
     if (file) {
       uploadInProgress.value = true
-      const reader = new FileReader()
-      const dataUrl: string = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(String(reader.result))
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
-      const up = await fetch('/.netlify/functions/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) })
-      const upJson = await up.json()
-      if (up.ok && upJson.url) patch.photo = upJson.url
-      uploadInProgress.value = false
+      try {
+        const reader = new FileReader()
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(String(reader.result))
+          reader.onerror = () => reject(reader.error)
+          reader.readAsDataURL(file)
+        })
+        const up = await fetch('/.netlify/functions/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) })
+        const upJson = await up.json()
+        if (up.ok && upJson.url) {
+          patch.photo = upJson.url
+        } else {
+          alert('Erro ao enviar foto: ' + (upJson.error || 'Erro desconhecido'))
+        }
+      } catch (error) {
+        console.error('Erro no upload:', error)
+        alert('Erro ao enviar foto. Tente novamente.')
+      } finally {
+        uploadInProgress.value = false
+      }
     }
 
     if (activeUser.value.password && activeUser.value.password.trim()) {
@@ -780,11 +804,60 @@ onMounted(() => {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.photo-upload { display:flex; flex-direction: column; gap:.5rem; }
-.photo-preview { display:flex; align-items:center; gap:.75rem; }
-.photo-image { width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid var(--gray-300); }
-.remove-photo { border:1px solid var(--gray-300); background:#fff; border-radius:.375rem; padding:.25rem .5rem; cursor:pointer; }
-.photo-input-row input[type="file"] { width:100%; }
+.photo-upload { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 0.5rem; 
+}
+
+.photo-preview { 
+  display: flex; 
+  align-items: center; 
+  gap: 0.75rem; 
+}
+
+.photo-image { 
+  width: 48px; 
+  height: 48px; 
+  border-radius: 50%; 
+  object-fit: cover; 
+  border: 1px solid var(--gray-300); 
+}
+
+.remove-photo { 
+  border: 1px solid var(--gray-300); 
+  background: #fff; 
+  border-radius: 0.375rem; 
+  padding: 0.25rem 0.5rem; 
+  cursor: pointer; 
+}
+
+.photo-input-row { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 0.5rem; 
+}
+
+.photo-input-row input[type="file"] { 
+  width: 100%; 
+}
+
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary-600);
+  font-size: 0.875rem;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--gray-300);
+  border-top: 2px solid var(--primary-500);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
 
 .role-buttons {
   display: flex;
