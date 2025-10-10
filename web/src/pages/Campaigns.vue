@@ -70,6 +70,14 @@
                 <option value="audio">Clientes de Áudio</option>
               </select>
             </label>
+            <div class="form-field">
+              <span>Gerar Lista de Transmissão</span>
+              <div class="share-row">
+                <button type="button" class="btn" @click="generateWhatsappList()">Gerar WhatsApp (copiar)</button>
+                <button type="button" class="btn" @click="generateEmailList()">Gerar Email (copiar)</button>
+              </div>
+              <div class="hint">Baseado na seleção de público. Busca clientes por histórico de compras nas categorias.</div>
+            </div>
             <label class="form-field">
               <span>Canal</span>
               <select v-model="form.channel" class="input" required>
@@ -163,6 +171,10 @@ onMounted(() => {
   store.fetchCampaigns().then(() => {
     campaigns.value = store.campaigns || []
   })
+  // garantir dados para geração de listas
+  store.fetchCustomers()
+  store.fetchProducts()
+  store.fetchSales()
 })
 
 const copyLink = (c: Campaign) => {
@@ -184,6 +196,80 @@ const paginatedCampaigns = computed(() => {
   const start = (page.value - 1) * pageSize.value
   return filteredCampaigns.value.slice(start, start + pageSize.value)
 })
+
+// Helpers de lista de transmissão
+const normalizeCategory = (c?: string) => (c || '').toLowerCase()
+
+const getAudienceCustomers = () => {
+  const customers = store.customers || []
+  if (form.value.audience === 'todos') return customers
+  const sales = store.sales || []
+  const products = store.products || []
+  const target = form.value.audience // eletronicos | acessorios | audio
+  const productByName = new Map(products.map(p => [p.name.toLowerCase(), p]))
+  const customerNames = new Set<string>()
+  // coletar nomes por vendas cujo produto é da categoria alvo
+  for (const s of sales) {
+    const prod = productByName.get((s.product || '').toLowerCase())
+    const cat = normalizeCategory(prod?.category)
+    const isTarget = (target === 'eletronicos' && cat.includes('eletr'))
+      || (target === 'acessorios' && cat.includes('acess'))
+      || (target === 'audio' && cat.includes('áudio') || cat.includes('audio'))
+    if (isTarget && s.customerName) customerNames.add(s.customerName)
+  }
+  // mapear nomes -> clientes do store, fallback por phone em sales se não achar
+  const nameToCustomer = new Map(customers.map(c => [c.name, c]))
+  const viaSalesCustomers: any[] = []
+  for (const s of sales) {
+    if (s.customerName && customerNames.has(s.customerName)) {
+      const c = nameToCustomer.get(s.customerName)
+      if (!c) viaSalesCustomers.push({ name: s.customerName, phone: s.customerPhone || '' })
+    }
+  }
+  const list = [...customerNames].map(n => nameToCustomer.get(n)).filter(Boolean) as any[]
+  // merge únicos por phone/email
+  const seen = new Set<string>()
+  const merged: { name: string; phone?: string; email?: string }[] = []
+  for (const c of [...list, ...viaSalesCustomers]) {
+    const key = (c.email || '') + '|' + (c.phone || '') + '|' + c.name
+    if (seen.has(key)) continue
+    seen.add(key)
+    merged.push({ name: c.name, phone: c.phone, email: c.email })
+  }
+  return merged
+}
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    alert('Lista copiada para a área de transferência!')
+  } catch {
+    // fallback
+    const ta = document.createElement('textarea')
+    ta.value = text
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    alert('Lista copiada!')
+  }
+}
+
+const generateWhatsappList = () => {
+  const recipients = getAudienceCustomers()
+  const numbers = recipients.map(r => (r.phone || '').replace(/\D+/g, '')).filter(n => n.length >= 10)
+  const unique = Array.from(new Set(numbers))
+  if (unique.length === 0) return alert('Nenhum número encontrado para este público.')
+  copyToClipboard(unique.join('\n'))
+}
+
+const generateEmailList = () => {
+  const recipients = getAudienceCustomers()
+  const emails = recipients.map(r => (r.email || '')).filter(e => /.+@.+\..+/.test(e))
+  const unique = Array.from(new Set(emails))
+  if (unique.length === 0) return alert('Nenhum email encontrado para este público.')
+  copyToClipboard(unique.join('; '))
+}
 
 const startEdit = (c: Campaign) => {
   isEditing.value = c.id || null
