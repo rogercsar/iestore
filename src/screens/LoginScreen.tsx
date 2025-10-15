@@ -21,18 +21,27 @@ export default function LoginScreen({ onLogin }: Props) {
     }
 
     setLoading(true);
-    
-    // Simulate login process
-    setTimeout(() => {
-      if (username === 'admin' && password === 'admin123') {
-        // Generate a simple token
-        const token = `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    (async () => {
+      try {
+        const res = await fetch('/.netlify/functions/postgres?table=auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: username.trim(), password: password.trim() })
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          Alert.alert('Erro', text || 'Falha no login');
+          return;
+        }
+        const json = await res.json();
+        const token = json?.token || `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         onLogin(token);
-      } else {
-        Alert.alert('Erro', 'Usuário ou senha incorretos');
+      } catch (e: any) {
+        Alert.alert('Erro', e?.message || 'Erro de rede ao tentar entrar');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, 1000);
+    })();
   };
 
   return (

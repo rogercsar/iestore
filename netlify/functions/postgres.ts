@@ -1,22 +1,31 @@
 import { Handler } from '@netlify/functions';
 import { Pool } from 'pg';
+import crypto from 'crypto';
 
-// Database configuration for Aiven PostgreSQL
+// Database configuration (prefers DATABASE_URL when provided, supports Supabase SSL)
+const connectionString = process.env.DATABASE_URL;
+
 const dbConfig = {
   host: process.env.DB_HOST || 'iestore-iestore.b.aivencloud.com',
   port: parseInt(process.env.DB_PORT || '15158'),
   database: process.env.DB_NAME || 'defaultdb',
   user: process.env.DB_USER || 'avnadmin',
   password: process.env.DB_PASSWORD || '',
-  ssl: {
-    rejectUnauthorized: false
-  },
+  ssl: { rejectUnauthorized: false },
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 };
 
-const pool = new Pool(dbConfig);
+const pool = connectionString
+  ? new Pool({
+      connectionString,
+      ssl: { rejectUnauthorized: false },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    })
+  : new Pool(dbConfig);
 
 export const handler: Handler = async (event, context) => {
   // Enable CORS
@@ -50,6 +59,10 @@ export const handler: Handler = async (event, context) => {
 
     try {
       switch (table) {
+        case 'auth':
+          // Simple authentication endpoint
+          await ensureUsersTable(client);
+          return await handleAuth(event, client, headers);
         case 'products':
           return await handleProducts(event, client, headers, action);
         case 'customers':
@@ -58,7 +71,9 @@ export const handler: Handler = async (event, context) => {
           return await handleSales(event, client, headers, action);
         case 'users':
           await ensureUsersTable(client);
-          await ensureAdminUser(client);
+          if (process.env.ENABLE_ADMIN_SEED === 'true') {
+            await ensureAdminUser(client);
+          }
           return await handleUsers(event, client, headers);
         case 'promotions':
           await ensurePromotionsTable(client);
@@ -400,6 +415,76 @@ async function handleUsers(event: any, client: any, headers: any) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid users action' }) };
   }
   return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+}
+
+function generateToken(payload: Record<string, any>): string {
+  const secret = process.env.JWT_SECRET || 'iestore-dev-secret';
+  // Minimal JWT-like token (header.payload.signature)
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const base64url = (obj: any) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+  const encodedHeader = base64url(header);
+  const encodedPayload = base64url(payload);
+  const toSign = `${encodedHeader}.${encodedPayload}`;
+  const signature = crypto.createHmac('sha256', secret).update(toSign).digest('base64url');
+  return `${toSign}.${signature}`;
+}
+
+async function handleAuth(event: any, client: any, headers: any) {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  let body: any = {};
+  try {
+    body = JSON.parse(event.body || '{}');
+  } catch {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON body' }) };
+  }
+
+  const { username, password } = body;
+  if (!username || !password) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'username and password are required' }) };
+  }
+
+  // Find user by username
+  const res = await client.query(
+    `SELECT id, name, email, username, password, role, status
+     FROM users WHERE username = $1 LIMIT 1`,
+    [username]
+  );
+
+  if (!res.rowCount || res.rowCount === 0) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Usuário ou senha incorretos' }) };
+  }
+
+  const user = res.rows[0];
+  if (user.status !== 'active') {
+    return { statusCode: 403, headers, body: JSON.stringify({ error: 'Usuário inativo' }) };
+  }
+
+  // Plain-text password check (consider hashing in production)
+  if (String(user.password || '') !== String(password)) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Usuário ou senha incorretos' }) };
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const token = generateToken({ sub: user.id, username: user.username, role: user.role, iat: now, exp: now + 60 * 60 * 24 });
+
+  return {
+    statusCode: 200,
+    headers,
+    body: JSON.stringify({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        status: user.status,
+      },
+    }),
+  };
 }
 
 async function ensureAdminUser(client: any) {

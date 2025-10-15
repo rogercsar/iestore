@@ -1,22 +1,30 @@
 import type { Handler } from '@netlify/functions';
 import { Pool } from 'pg';
 
-// Database configuration for Aiven PostgreSQL
+// Database configuration (prefers DATABASE_URL when provided, supports Supabase SSL)
+const connectionString = process.env.DATABASE_URL;
+
 const dbConfig = {
   host: process.env.DB_HOST || 'iestore-iestore.b.aivencloud.com',
   port: parseInt(process.env.DB_PORT || '15158'),
   database: process.env.DB_NAME || 'defaultdb',
   user: process.env.DB_USER || 'avnadmin',
   password: process.env.DB_PASSWORD || '',
-  ssl: {
-    rejectUnauthorized: false
-  },
+  ssl: { rejectUnauthorized: false },
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 };
 
-const pool = new Pool(dbConfig);
+const pool = connectionString
+  ? new Pool({
+      connectionString,
+      ssl: { rejectUnauthorized: false },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    })
+  : new Pool(dbConfig);
 
 const handler: Handler = async (event) => {
   try {
