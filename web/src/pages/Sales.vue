@@ -184,11 +184,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useAppStore } from '../stores/app'
 import type { Sale, Customer, Product } from '../services/api'
 
 const store = useAppStore()
-const { sales, customers, products, loading, error } = store
+// Use storeToRefs to keep reactivity and refs instead of unwrapped primitives
+const { sales, customers, products, loading, error } = storeToRefs(store)
 
 const dateFilter = ref('today')
 const statusFilter = ref('')
