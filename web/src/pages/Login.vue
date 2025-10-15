@@ -71,7 +71,7 @@ const handleLogin = async () => {
 
   loading.value = true
   try {
-    const payload = { username: username.value.trim(), password: password.value.trim() }
+  const payload = { username: username.value.trim().toLowerCase(), password: password.value.trim() }
     console.log('[login:web] Attempt', { username: payload.username })
 
     const res = await fetch('/.netlify/functions/postgres?table=auth', {

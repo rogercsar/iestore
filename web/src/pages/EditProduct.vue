@@ -83,6 +83,13 @@
             </div>
             
             <div v-else class="upload-section">
+              <input
+                ref="fileInputRef"
+                type="file"
+                accept="image/*"
+                class="hidden-file-input"
+                @change="onFileChange"
+              />
               <button class="upload-button" @click="showImageOptions" :disabled="uploading">
                 <span class="upload-icon">{{ uploading ? '⏳' : '📷' }}</span>
                 <span class="upload-text">{{ uploading ? 'Processando...' : 'Adicionar Foto' }}</span>
@@ -160,6 +167,7 @@ const product = ref<ProductForm>({
 
 const loading = ref(false)
 const uploading = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const profit = computed(() => {
   return product.value.unitPrice - product.value.cost
@@ -265,8 +273,40 @@ const handleSubmit = async () => {
 }
 
 const showImageOptions = () => {
-  // In a real app, this would show image picker options
-  alert('Funcionalidade de seleção de imagem será implementada')
+  // Dispara o input de arquivo para seleção de imagem
+  fileInputRef.value?.click()
+}
+
+const onFileChange = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    alert('Selecione um arquivo de imagem válido')
+    return
+  }
+  const MAX_SIZE = 2 * 1024 * 1024 // 2MB
+  if (file.size > MAX_SIZE) {
+    alert('Imagem muito grande. Use uma imagem até 2MB')
+    return
+  }
+
+  uploading.value = true
+  try {
+    const reader = new FileReader()
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
+    })
+    product.value.photo = dataUrl
+  } catch (err) {
+    console.error('Erro ao processar imagem:', err)
+    alert('Falha ao processar imagem. Tente novamente.')
+  } finally {
+    uploading.value = false
+    if (fileInputRef.value) fileInputRef.value.value = ''
+  }
 }
 
 const removeImage = () => {
@@ -346,6 +386,15 @@ onMounted(() => {
   border-radius: 0.5rem;
   font-size: 1rem;
   transition: all 0.2s ease;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
 }
 
 .form-input:focus {

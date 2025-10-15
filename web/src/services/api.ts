@@ -102,6 +102,7 @@ export interface User {
   role: 'admin' | 'user'
   status: 'active' | 'inactive'
   createdAt?: string
+  password?: string
 }
 
 class ApiService {
@@ -520,7 +521,7 @@ class ApiService {
         name: user.name,
         email: user.email,
         username: user.username ?? null,
-        password: null,
+        password: user.password ?? null,
         phone: user.phone ?? null,
         photo: user.photo ?? null,
         role: user.role ?? 'user',
