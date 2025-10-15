@@ -1,6 +1,6 @@
-# Configuração de Variáveis de Ambiente
+# Configuração de Variáveis de Ambiente (Supabase)
 
-Este documento explica como configurar as variáveis de ambiente para usar o PostgreSQL da Aiven de forma segura.
+Este documento explica como configurar as variáveis de ambiente para usar o Supabase com segurança nas funções Netlify.
 
 ## 🔐 Problema Resolvido
 
@@ -9,13 +9,10 @@ O GitHub estava bloqueando o push porque detectou credenciais hardcoded nos arqu
 ## 📋 Variáveis Necessárias
 
 ```bash
-DATABASE_URL=postgres://avnadmin:YOUR_PASSWORD@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require
-DB_HOST=iestore-iestore.b.aivencloud.com
-DB_PORT=15158
-DB_NAME=defaultdb
-DB_USER=avnadmin
-DB_PASSWORD=YOUR_PASSWORD
-DB_SSL=true
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+# Opcional: fallback com ANON KEY (menos permissões)
+SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
 ## 🏠 Desenvolvimento Local
@@ -34,23 +31,19 @@ cp env.example .env
 ### 2. **Conteúdo do .env**
 
 ```bash
-DATABASE_URL=postgres://avnadmin:YOUR_PASSWORD@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require
-DB_HOST=iestore-iestore.b.aivencloud.com
-DB_PORT=15158
-DB_NAME=defaultdb
-DB_USER=avnadmin
-DB_PASSWORD=YOUR_PASSWORD
-DB_SSL=true
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
 ### 3. **Testar localmente**
 
 ```bash
-# Testar conexão com banco
-node scripts/test-database.js
+# Testar função de saúde
+curl http://localhost:8888/.netlify/functions/test
 
-# Testar funções Netlify
-node scripts/test-netlify-functions.js
+# Testar endpoints
+curl "http://localhost:8888/.netlify/functions/postgres?table=products"
 ```
 
 ## 🚀 Produção (Netlify)
@@ -63,17 +56,9 @@ node scripts/test-netlify-functions.js
 
 | Variable | Value |
 |----------|-------|
-| `DATABASE_URL` | `postgres://avnadmin:YOUR_PASSWORD@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require` |
-| `DB_HOST` | `iestore-iestore.b.aivencloud.com` |
-| `DB_PORT` | `15158` |
-| `DB_NAME` | `defaultdb` |
-| `DB_USER` | `avnadmin` |
-| `DB_PASSWORD` | `YOUR_PASSWORD` |
-| `DB_SSL` | `true` |
-
-> Dica Supabase (serverless): use a Connection string (Pooler) — porta `6543`.
-> Ex.: `postgres://postgres:YOUR_PASSWORD@db.<project-ref>.supabase.co:6543/postgres?sslmode=require`
-> Configure apenas `DATABASE_URL` se preferir; os campos `DB_*` são fallback.
+| `SUPABASE_URL` | `https://YOUR_PROJECT_REF.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `YOUR_SERVICE_ROLE_KEY` |
+| `SUPABASE_ANON_KEY` | `YOUR_ANON_KEY` (opcional) |
 
 ### 2. **Verificar Deploy**
 
@@ -81,20 +66,15 @@ Após configurar as variáveis:
 
 1. Faça um novo deploy
 2. Teste a função: `https://seu-site.netlify.app/.netlify/functions/test`
-3. Verifique se aparece: `"database": { "connected": true }`
+3. Verifique se a resposta JSON contém contagens de tabelas sem erro.
 
 ## 🔧 Arquivos Atualizados
 
-Os seguintes arquivos foram atualizados para usar variáveis de ambiente:
+Os seguintes arquivos usam as variáveis do Supabase:
 
 - ✅ `netlify/functions/postgres.ts`
 - ✅ `netlify/functions/test.ts`
-- ✅ `src/api/config.ts`
-- ✅ `scripts/test-database.js`
-- ✅ `scripts/test-hybrid-api.js`
-- ✅ `scripts/test-updated-routes.js`
-- ✅ `scripts/test-netlify-functions.js`
-- ✅ `app.json` (credenciais mascaradas)
+- ✅ `web/src/config/environment.ts` (apenas base URL do endpoint)
 
 ## 🛡️ Segurança
 
@@ -105,7 +85,8 @@ password: 'YOUR_PASSWORD' // ❌ Hardcoded
 
 ### **Depois (Seguro):**
 ```typescript
-password: process.env.DB_PASSWORD || '' // ✅ Variável de ambiente
+const url = process.env.SUPABASE_URL
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY // ✅ Variável de ambiente (apenas no backend)
 ```
 
 ## 🧪 Testando a Configuração
@@ -113,10 +94,11 @@ password: process.env.DB_PASSWORD || '' // ✅ Variável de ambiente
 ### **1. Teste Local:**
 ```bash
 # Definir variáveis de ambiente
-export DB_PASSWORD="YOUR_PASSWORD"
+export SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="YOUR_SERVICE_ROLE_KEY"
 
-# Testar conexão
-node scripts/test-database.js
+# Testar função
+curl http://localhost:8888/.netlify/functions/test
 ```
 
 ### **2. Teste Netlify:**
@@ -132,40 +114,21 @@ curl https://seu-site.netlify.app/.netlify/functions/test
 
 ## 📱 Aplicação React Native
 
-Para a aplicação React Native, as credenciais são configuradas no `app.json`:
-
-```json
-{
-  "expo": {
-    "extra": {
-      "DATABASE_URL": "postgres://avnadmin:***@iestore-iestore.b.aivencloud.com:15158/defaultdb?sslmode=require",
-      "DB_HOST": "iestore-iestore.b.aivencloud.com",
-      "DB_PORT": "15158",
-      "DB_NAME": "defaultdb",
-      "DB_USER": "avnadmin",
-      "DB_PASSWORD": "***",
-      "DB_SSL": "true"
-    }
-  }
-}
-```
+Para a aplicação React Native, não defina `SERVICE_ROLE_KEY`. Use o endpoint `/.netlify/functions/postgres` para acessar dados com segurança.
 
 ## 🎯 Próximos Passos
 
-1. ✅ **Credenciais removidas** dos arquivos
-2. ✅ **Variáveis de ambiente** configuradas
-3. 🔄 **Fazer push** para GitHub (agora seguro)
-4. 🚀 **Deploy na Netlify** com variáveis de ambiente
-5. 🧪 **Testar** em produção
+1. ✅ **Credenciais adicionadas** ao `.env` ou Netlify
+2. ✅ **Deploy** na Netlify com variáveis `SUPABASE_*`
+3. 🧪 **Testar** endpoints de produtos/clientes/vendas
 
 ## 🔍 Verificação Final
 
 Após configurar tudo, verifique:
 
-- ✅ GitHub não bloqueia mais o push
 - ✅ Aplicação local funciona com `.env`
 - ✅ Netlify funciona com variáveis de ambiente
-- ✅ Dados PostgreSQL aparecem na aplicação
+- ✅ Dados do Supabase aparecem na aplicação
 
 ---
 

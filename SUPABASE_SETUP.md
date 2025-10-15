@@ -1,37 +1,26 @@
-# Supabase Setup (PostgreSQL)
+# Supabase Setup (via supabase-js)
 
-Este guia descreve como conectar o projeto ao banco de dados do Supabase e como criar as tabelas necessárias.
+Este guia descreve como conectar o projeto ao Supabase usando o cliente oficial `@supabase/supabase-js` e como criar as tabelas necessárias.
 
 ## 1) Credenciais e variáveis de ambiente
 
-Pegue as credenciais em: Supabase → Project Settings → Database → Connection string.
+Pegue as credenciais em: Supabase → Project Settings → API.
 
 Adicione no `.env` (ou no painel da Netlify, em Site settings → Environment variables):
 
 ```
-# Conexão direta (porta 5432) — funciona, mas pode ter timeouts em serverless
-DATABASE_URL=postgres://postgres:YOUR_PASSWORD@YOUR_PROJECT_HOST:5432/postgres?sslmode=require
-
-# Conexão via Pooler (recomendado para funções serverless como Netlify) — porta 6543
-# Copie a Connection string (Pooler) no Supabase
-# Exemplo:
-# DATABASE_URL=postgres://postgres:YOUR_PASSWORD@YOUR_PROJECT_HOST:6543/postgres?sslmode=require
-
-DB_HOST=YOUR_PROJECT_HOST
-DB_PORT=5432
-DB_NAME=postgres
-DB_USER=postgres
-DB_PASSWORD=YOUR_PASSWORD
-DB_SSL=true
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+# Use a Service Role key nas funções serverless (acesso completo somente no backend)
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+# Opcional: ANON KEY como fallback (menos permissões)
+SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
-- `YOUR_PROJECT_HOST` costuma ter o formato `db.<hash>.supabase.co`.
-- `DB_SSL=true` é obrigatório para Supabase.
- - Para funções serverless (Netlify), preferir a Connection string (Pooler) do Supabase (porta 6543).
+> Importante: nunca exponha a `SERVICE_ROLE_KEY` no front-end. Use-a apenas em funções serverless.
 
 ## 2) Atualizar exemplo de ambiente
 
-O arquivo `env.example` já contém um bloco com valores para Supabase. Copie-o para `.env` e ajuste.
+O arquivo `env.example` contém os campos `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY`. Copie-o para `.env` e ajuste.
 
 ## 3) Criar o schema no Supabase
 
@@ -42,32 +31,21 @@ No painel do Supabase, abra SQL → Editor, cole e execute o conteúdo de `scrip
 
 ## 4) Conexão nas funções (Netlify)
 
-As funções em `netlify/functions/postgres.ts` e `netlify/functions/test.ts` usam o pacote `pg` e lerão as variáveis acima automaticamente.
+As funções em `netlify/functions/postgres.ts` e `netlify/functions/test.ts` usam `@supabase/supabase-js`.
 
 Exemplo de configuração (já existente no projeto):
 
 ```ts
-import { Pool } from 'pg'
+import { createClient } from '@supabase/supabase-js'
 
-const dbConfig = {
-  host: process.env.DB_HOST, // ex.: db.<hash>.supabase.co
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'postgres',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  ssl: { rejectUnauthorized: false }, // Supabase exige SSL
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-}
-
-export const pool = new Pool(dbConfig)
+const SUPABASE_URL = process.env.SUPABASE_URL || ''
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || ''
+export const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null
 ```
 
 Observações:
-- No Supabase, o certificado SSL é gerenciado pelo serviço. `rejectUnauthorized: false` é suficiente.
-- Se preferir, use `DATABASE_URL` diretamente com `pg`.
- - Em ambientes serverless, usar o Pooler ajuda a evitar timeouts e excesso de conexões.
+- O cliente Supabase gerencia conexões de forma eficiente para ambientes serverless.
+- Se você ainda usa scripts legados com `pg`, mantenha `DATABASE_URL/DB_*` no `.env` somente para esses scripts.
 
 ## 5) Segurança recomendada
 
@@ -84,9 +62,9 @@ Caso já tenha dados em outra instância:
 
 ## 7) Validação
 
-- Rode a função de teste: `/.netlify/functions/test` no seu deploy Netlify. Deve retornar `database.connected: true`.
+- Rode a função de teste: `/.netlify/functions/test` no seu deploy Netlify. Deve retornar contagens de tabelas.
 - No front web (Vue), o `environment.apiBaseUrl` já aponta para `/.netlify/functions/postgres`.
 
 ---
 
-Com isso, o projeto estará pronto para usar o banco de dados do Supabase com segurança e o schema consistente.
+Com isso, o projeto estará pronto para usar o Supabase com segurança e o schema consistente.

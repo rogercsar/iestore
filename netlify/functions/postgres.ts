@@ -1,38 +1,11 @@
 import { Handler } from '@netlify/functions';
-import { Pool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-// Database configuration (prefers DATABASE_URL when provided, supports Supabase SSL)
-const connectionString = process.env.DATABASE_URL;
-
-const dbConfig = {
-  host: process.env.DB_HOST || 'iestore-iestore.b.aivencloud.com',
-  port: parseInt(process.env.DB_PORT || '15158'),
-  database: process.env.DB_NAME || 'defaultdb',
-  user: process.env.DB_USER || 'avnadmin',
-  password: process.env.DB_PASSWORD || '',
-  ssl: { rejectUnauthorized: false },
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-};
-
-const pool = connectionString
-  ? new Pool({
-      connectionString,
-      ssl: { rejectUnauthorized: false },
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 300,
-    })
-  : new Pool({
-      ...dbConfig,
-      connectionTimeoutMillis: 10000,
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 300,
-    });
+// Supabase client configuration for serverless functions
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 export const handler: Handler = async (event, context) => {
   // Enable CORS
@@ -62,43 +35,39 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    const client = await pool.connect();
-
-    try {
-      switch (table) {
-        case 'auth':
-          // Simple authentication endpoint
-          await ensureUsersTable(client);
-          return await handleAuth(event, client, headers);
-        case 'products':
-          return await handleProducts(event, client, headers, action);
-        case 'customers':
-          return await handleCustomers(event, client, headers, action);
-        case 'sales':
-          return await handleSales(event, client, headers, action);
-        case 'users':
-          await ensureUsersTable(client);
-          if (process.env.ENABLE_ADMIN_SEED === 'true') {
-            await ensureAdminUser(client);
-          }
-          return await handleUsers(event, client, headers);
-        case 'promotions':
-          await ensurePromotionsTable(client);
-          return await handlePromotions(event, client, headers);
-        case 'campaigns':
-          await ensureCampaignsTable(client);
-          return await handleCampaigns(event, client, headers);
-        case 'dashboard':
-          return await handleDashboard(event, client, headers);
-        default:
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: `Unknown table: ${table}` }),
-          };
-      }
-    } finally {
-      client.release();
+    if (!supabase) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Supabase não configurado. Defina SUPABASE_URL e SUPABASE_ANON_KEY ou SUPABASE_SERVICE_ROLE_KEY' }),
+      };
+    }
+    switch (table) {
+      case 'auth':
+        return await handleAuth(event, headers);
+      case 'products':
+        return await handleProducts(event, headers, action);
+      case 'customers':
+        return await handleCustomers(event, headers, action);
+      case 'sales':
+        return await handleSales(event, headers, action);
+      case 'users':
+        if (process.env.ENABLE_ADMIN_SEED === 'true') {
+          await ensureAdminUser();
+        }
+        return await handleUsers(event, headers);
+      case 'promotions':
+        return await handlePromotions(event, headers);
+      case 'campaigns':
+        return await handleCampaigns(event, headers);
+      case 'dashboard':
+        return await handleDashboard(event, headers);
+      default:
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: `Unknown table: ${table}` }),
+        };
     }
   } catch (error) {
     console.error('Database error:', error);
@@ -172,63 +141,47 @@ async function ensureProductsTable(client: any) {
   }
 }
 
-async function handleProducts(event: any, client: any, headers: any, action: string) {
-  await ensureProductsTable(client);
-  
+async function handleProducts(event: any, headers: any, action: string) {
   if (event.httpMethod === 'GET') {
-    // List products
-    const result = await client.query(`
-      SELECT id, name, quantity, cost, unit_price as "unitPrice", photo
-      FROM products 
-      ORDER BY name
-    `);
-    
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify(result.rows),
-    };
+    const { data, error } = await supabase!
+      .from('products')
+      .select('id, name, quantity, cost, unit_price, photo')
+      .order('name', { ascending: true });
+    if (error) throw error;
+    const out = (data || []).map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      quantity: Number(r.quantity || 0),
+      cost: Number(r.cost || 0),
+      unitPrice: Number(r.unit_price || 0),
+      photo: r.photo || null,
+    }));
+    return { statusCode: 200, headers, body: JSON.stringify(out) };
   } else if (event.httpMethod === 'POST') {
-    // Create or update product
     const body = JSON.parse(event.body || '{}');
     const { mode, rows } = body;
-    
+    const toProductRow = (p: any) => ({
+      id: p.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: p.name,
+      quantity: p.quantity || 0,
+      cost: p.cost || 0,
+      unit_price: p.unitPrice ?? p.unit_price ?? 0,
+      photo: p.photo || null,
+    });
     if (mode === 'append' && rows && rows.length > 0) {
-      const product = rows[0];
-      await client.query(`
-        INSERT INTO products (id, name, quantity, cost, unit_price, photo)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (name) 
-        DO UPDATE SET 
-          quantity = EXCLUDED.quantity,
-          cost = EXCLUDED.cost,
-          unit_price = EXCLUDED.unit_price,
-          photo = EXCLUDED.photo,
-          updated_at = CURRENT_TIMESTAMP
-      `, [product.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, product.name, product.quantity, product.cost, product.unitPrice, product.photo || null]);
+      const product = toProductRow(rows[0]);
+      const { error } = await supabase!.from('products').upsert([product], { onConflict: 'name' });
+      if (error) throw error;
     } else if (mode === 'overwrite' && rows) {
-      // Clear existing products and insert new ones
-      await client.query('DELETE FROM products');
-      for (const product of rows) {
-        await client.query(`
-          INSERT INTO products (id, name, quantity, cost, unit_price, photo)
-          VALUES ($1, $2, $3, $4, $5, $6)
-        `, [product.id || `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, product.name, product.quantity, product.cost, product.unitPrice, product.photo || null]);
-      }
+      const { error: delError } = await supabase!.from('products').delete().not('id', 'is', null);
+      if (delError) throw delError;
+      const payload = (rows || []).map(toProductRow);
+      const { error: upError } = await supabase!.from('products').upsert(payload, { onConflict: 'name' });
+      if (upError) throw upError;
     }
-    
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ success: true }),
-    };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
   }
-  
-  return {
-    statusCode: 405,
-    headers,
-    body: JSON.stringify({ error: 'Method not allowed' }),
-  };
+  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 }
 
 async function ensurePromotionsTable(client: any) {
@@ -284,139 +237,133 @@ async function ensureUsersTable(client: any) {
   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS photo text`);
 }
 
-async function handlePromotions(event: any, client: any, headers: any) {
+async function handlePromotions(event: any, headers: any) {
   if (event.httpMethod === 'GET') {
-    const result = await client.query(`
-      SELECT 
-        "id", 
-        "name", 
-        "discountPercent", 
-        "startAt", 
-        "endAt", 
-        "products"
-      FROM promotions
-      ORDER BY "startAt" DESC
-    `);
-    return { statusCode: 200, headers, body: JSON.stringify(result.rows) };
+    const { data, error } = await supabase!
+      .from('promotions')
+      .select('id, name, discountPercent, startAt, endAt, products')
+      .order('startAt', { ascending: false });
+    if (error) throw error;
+    return { statusCode: 200, headers, body: JSON.stringify(data || []) };
   } else if (event.httpMethod === 'POST') {
     const body = JSON.parse(event.body || '{}');
     const { mode, rows } = body;
     if (mode === 'append' && rows && rows.length > 0) {
       const p = rows[0];
-      await client.query(`
-        INSERT INTO promotions ("name","discountPercent","startAt","endAt","products")
-        VALUES ($1,$2,$3,$4,$5)
-      `, [p.name, p.discountPercent, p.startAt, p.endAt, JSON.stringify(p.products || [])]);
+      const { error } = await supabase!
+        .from('promotions')
+        .insert([{ name: p.name, discountPercent: p.discountPercent, startAt: p.startAt, endAt: p.endAt, products: p.products || [] }]);
+      if (error) throw error;
     } else if (mode === 'overwrite' && rows) {
-      await client.query('DELETE FROM promotions');
-      for (const p of rows) {
-        await client.query(`
-          INSERT INTO promotions ("name","discountPercent","startAt","endAt","products")
-          VALUES ($1,$2,$3,$4,$5)
-        `, [p.name, p.discountPercent, p.startAt, p.endAt, JSON.stringify(p.products || [])]);
-      }
+      const { error: delError } = await supabase!.from('promotions').delete().not('id', 'is', null);
+      if (delError) throw delError;
+      const payload = (rows || []).map((p: any) => ({ name: p.name, discountPercent: p.discountPercent, startAt: p.startAt, endAt: p.endAt, products: p.products || [] }));
+      const { error: insError } = await supabase!.from('promotions').insert(payload);
+      if (insError) throw insError;
     }
     return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
   }
   return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 }
 
-async function handleCampaigns(event: any, client: any, headers: any) {
+async function handleCampaigns(event: any, headers: any) {
   if (event.httpMethod === 'GET') {
-    const result = await client.query(`
-      SELECT 
-        "id",
-        "name",
-        "promotionIds",
-        "audience",
-        "channel",
-        "publicId"
-      FROM campaigns
-      ORDER BY "createdAt" DESC
-    `);
-    return { statusCode: 200, headers, body: JSON.stringify(result.rows) };
+    const { data, error } = await supabase!
+      .from('campaigns')
+      .select('id, name, promotionIds, audience, channel, publicId, createdAt')
+      .order('createdAt', { ascending: false });
+    if (error) throw error;
+    const out = (data || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      promotionIds: c.promotionIds || [],
+      audience: c.audience || 'todos',
+      channel: c.channel,
+      publicId: c.publicId || null,
+    }));
+    return { statusCode: 200, headers, body: JSON.stringify(out) };
   } else if (event.httpMethod === 'POST') {
     const body = JSON.parse(event.body || '{}');
     const { mode, rows } = body;
     if (mode === 'append' && rows && rows.length > 0) {
       const c = rows[0];
-      await client.query(`
-        INSERT INTO campaigns ("name","promotionIds","audience","channel","publicId")
-        VALUES ($1,$2,$3,$4,$5)
-        ON CONFLICT ("publicId") DO NOTHING
-      `, [c.name, JSON.stringify(c.promotionIds || []), c.audience || 'todos', c.channel || 'whatsapp', c.publicId || null]);
+      const payload = [{
+        name: c.name,
+        promotionIds: c.promotionIds || [],
+        audience: c.audience || 'todos',
+        channel: c.channel || 'whatsapp',
+        publicId: c.publicId || null,
+      }];
+      const { error } = await supabase!.from('campaigns').upsert(payload, { onConflict: 'publicId' });
+      if (error) throw error;
     } else if (mode === 'overwrite' && rows) {
-      await client.query('DELETE FROM campaigns');
-      for (const c of rows) {
-        await client.query(`
-          INSERT INTO campaigns ("name","promotionIds","audience","channel","publicId")
-          VALUES ($1,$2,$3,$4,$5)
-          ON CONFLICT ("publicId") DO NOTHING
-        `, [c.name, JSON.stringify(c.promotionIds || []), c.audience || 'todos', c.channel || 'whatsapp', c.publicId || null]);
-      }
+      const { error: delError } = await supabase!.from('campaigns').delete().not('id', 'is', null);
+      if (delError) throw delError;
+      const payload = (rows || []).map((c: any) => ({
+        name: c.name,
+        promotionIds: c.promotionIds || [],
+        audience: c.audience || 'todos',
+        channel: c.channel || 'whatsapp',
+        publicId: c.publicId || null,
+      }));
+      const { error: insError } = await supabase!.from('campaigns').insert(payload);
+      if (insError) throw insError;
     }
     return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
   }
   return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 }
 
-async function handleUsers(event: any, client: any, headers: any) {
+async function handleUsers(event: any, headers: any) {
   if (event.httpMethod === 'GET') {
-    const result = await client.query(`
-      SELECT id, name, email, username, phone, photo, role, status
-      FROM users
-      ORDER BY created_at DESC
-    `);
-    return { statusCode: 200, headers, body: JSON.stringify(result.rows) };
+    const { data, error } = await supabase!
+      .from('users')
+      .select('id, name, email, username, phone, photo, role, status, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return { statusCode: 200, headers, body: JSON.stringify(data || []) };
   } else if (event.httpMethod === 'POST') {
     const body = JSON.parse(event.body || '{}');
-    // Accept both { action, data } and { mode, rows }
     const action = body.action || body.mode;
     const data = body.data || body.rows;
     if (action === 'append' && Array.isArray(data) && data.length > 0) {
       const u = data[0];
-      await client.query(
-        `INSERT INTO users (id, name, email, username, password, phone, photo, role, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-         ON CONFLICT (id) DO UPDATE SET
-           name = EXCLUDED.name,
-           email = EXCLUDED.email,
-           username = COALESCE(EXCLUDED.username, users.username),
-           password = COALESCE(EXCLUDED.password, users.password),
-           phone = COALESCE(EXCLUDED.phone, users.phone),
-           photo = COALESCE(EXCLUDED.photo, users.photo),
-           role = EXCLUDED.role,
-           status = EXCLUDED.status,
-           updated_at = CURRENT_TIMESTAMP`,
-        [u.id, u.name, u.email, u.username || null, u.password || null, u.phone || null, u.photo || null, u.role || 'user', u.status || 'active']
-      );
+      const payload = [{
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        username: u.username ?? null,
+        password: u.password ?? null,
+        phone: u.phone ?? null,
+        photo: u.photo ?? null,
+        role: u.role ?? 'user',
+        status: u.status ?? 'active',
+      }];
+      const { error } = await supabase!.from('users').upsert(payload, { onConflict: 'id' });
+      if (error) throw error;
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
     if (action === 'overwrite' && body.id) {
-      // Partial update by id
       const id = body.id;
       const patch = data || {};
-      const fields: string[] = [];
-      const values: any[] = [];
-      let idx = 1;
-      if (typeof patch.name === 'string') { fields.push(`name = $${++idx}`); values.push(patch.name); }
-      if (typeof patch.email === 'string') { fields.push(`email = $${++idx}`); values.push(patch.email); }
-      if (typeof patch.username === 'string') { fields.push(`username = $${++idx}`); values.push(patch.username); }
-      if (typeof patch.password === 'string') { fields.push(`password = $${++idx}`); values.push(patch.password); }
-      if (typeof patch.phone === 'string') { fields.push(`phone = $${++idx}`); values.push(patch.phone); }
-      if (typeof patch.photo === 'string') { fields.push(`photo = $${++idx}`); values.push(patch.photo); }
-      if (typeof patch.role === 'string') { fields.push(`role = $${++idx}`); values.push(patch.role); }
-      if (typeof patch.status === 'string') { fields.push(`status = $${++idx}`); values.push(patch.status); }
-      if (fields.length > 0) {
-        await client.query(
-          `UPDATE users SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
-          [id, ...values]
-        );
+      const update: any = {};
+      if (typeof patch.name === 'string') update.name = patch.name;
+      if (typeof patch.email === 'string') update.email = patch.email;
+      if (typeof patch.username === 'string') update.username = patch.username;
+      if (typeof patch.password === 'string') update.password = patch.password;
+      if (typeof patch.phone === 'string') update.phone = patch.phone;
+      if (typeof patch.photo === 'string') update.photo = patch.photo;
+      if (typeof patch.role === 'string') update.role = patch.role;
+      if (typeof patch.status === 'string') update.status = patch.status;
+      if (Object.keys(update).length > 0) {
+        const { error } = await supabase!.from('users').update(update).eq('id', id);
+        if (error) throw error;
       }
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
     if (action === 'delete' && body.id) {
-      await client.query(`DELETE FROM users WHERE id = $1`, [body.id]);
+      const { error } = await supabase!.from('users').delete().eq('id', body.id);
+      if (error) throw error;
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid users action' }) };
@@ -436,7 +383,7 @@ function generateToken(payload: Record<string, any>): string {
   return `${toSign}.${signature}`;
 }
 
-async function handleAuth(event: any, client: any, headers: any) {
+async function handleAuth(event: any, headers: any) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
@@ -454,17 +401,17 @@ async function handleAuth(event: any, client: any, headers: any) {
   }
 
   // Find user by username
-  const res = await client.query(
-    `SELECT id, name, email, username, password, role, status
-     FROM users WHERE username = $1 LIMIT 1`,
-    [username]
-  );
+  const { data: user, error } = await supabase!
+    .from('users')
+    .select('id, name, email, username, password, role, status')
+    .eq('username', username)
+    .limit(1)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error; // treat not found below
 
-  if (!res.rowCount || res.rowCount === 0) {
+  if (!user) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Usuário ou senha incorretos' }) };
   }
-
-  const user = res.rows[0];
   if (user.status !== 'active') {
     return { statusCode: 403, headers, body: JSON.stringify({ error: 'Usuário inativo' }) };
   }
@@ -494,249 +441,199 @@ async function handleAuth(event: any, client: any, headers: any) {
   };
 }
 
-async function ensureAdminUser(client: any) {
-  // Seed admin user if username not present
+async function ensureAdminUser() {
   const username = 'adiestore';
   const password = 'Admin@iestore1';
-  const check = await client.query(`SELECT 1 FROM users WHERE username = $1 LIMIT 1`, [username]);
-  if (check.rowCount && check.rowCount > 0) return;
-  await client.query(
-    `INSERT INTO users (id, name, email, username, password, role, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)
-     ON CONFLICT (id) DO NOTHING`,
-    [
-      'user_admin_adistore',
-      'Admin IEStore',
-      'admin@iestore.local',
+  const { data, error } = await supabase!
+    .from('users')
+    .select('id')
+    .eq('username', username)
+    .limit(1);
+  if (error) throw error;
+  if (data && data.length > 0) return;
+  const { error: upError } = await supabase!.from('users').upsert([
+    {
+      id: 'user_admin_adistore',
+      name: 'Admin IEStore',
+      email: 'admin@iestore.local',
       username,
       password,
-      'admin',
-      'active'
-    ]
-  );
+      role: 'admin',
+      status: 'active',
+    },
+  ], { onConflict: 'id' });
+  if (upError) throw upError;
 }
 
-async function handleCustomers(event: any, client: any, headers: any, action: string) {
+async function handleCustomers(event: any, headers: any, action: string) {
   if (event.httpMethod === 'GET') {
-    // List customers
-    const result = await client.query(`
-      SELECT 
-        id, name, phone, email, address, total_purchases as "totalPurchases",
-        total_value as "totalValue", pending_amount as "pendingAmount",
-        last_purchase as "lastPurchase", notes,
-        'active' as status
-      FROM customers 
-      ORDER BY name
-    `);
-    
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify(result.rows),
-    };
+    const { data, error } = await supabase!
+      .from('customers')
+      .select('id, name, phone, email, address, total_purchases, total_value, pending_amount, last_purchase, notes')
+      .order('name', { ascending: true });
+    if (error) throw error;
+    const out = (data || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone || null,
+      email: c.email || null,
+      address: c.address || null,
+      totalPurchases: Number(c.total_purchases || 0),
+      totalValue: Number(c.total_value || 0),
+      pendingAmount: Number(c.pending_amount || 0),
+      lastPurchase: c.last_purchase || null,
+      notes: c.notes || null,
+      status: 'active',
+    }));
+    return { statusCode: 200, headers, body: JSON.stringify(out) };
   } else if (event.httpMethod === 'POST') {
-    // Create or update customer
     const body = JSON.parse(event.body || '{}');
     const { mode, rows } = body;
-    
     if (mode === 'append' && rows && rows.length > 0) {
       const customer = rows[0];
-      await client.query(`
-        INSERT INTO customers (
-          id, name, phone, email, address, total_purchases, total_value,
-          pending_amount, last_purchase, notes
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        ON CONFLICT (id) 
-        DO UPDATE SET 
-          name = EXCLUDED.name,
-          phone = EXCLUDED.phone,
-          email = EXCLUDED.email,
-          address = EXCLUDED.address,
-          total_purchases = EXCLUDED.total_purchases,
-          total_value = EXCLUDED.total_value,
-          pending_amount = EXCLUDED.pending_amount,
-          last_purchase = EXCLUDED.last_purchase,
-          notes = EXCLUDED.notes,
-          updated_at = CURRENT_TIMESTAMP
-      `, [
-        customer.id || `customer_${Date.now()}`,
-        customer.name,
-        customer.phone || null,
-        customer.email || null,
-        customer.address || null,
-        customer.totalPurchases || 0,
-        customer.totalValue || 0,
-        customer.pendingAmount || 0,
-        customer.lastPurchase || null,
-        customer.notes || null
-      ]);
+      const payload = [{
+        id: customer.id || `customer_${Date.now()}`,
+        name: customer.name,
+        phone: customer.phone || null,
+        email: customer.email || null,
+        address: customer.address || null,
+        total_purchases: customer.totalPurchases || 0,
+        total_value: customer.totalValue || 0,
+        pending_amount: customer.pendingAmount || 0,
+        last_purchase: customer.lastPurchase || null,
+        notes: customer.notes || null,
+      }];
+      const { error } = await supabase!.from('customers').upsert(payload, { onConflict: 'id' });
+      if (error) throw error;
     } else if (mode === 'overwrite' && rows) {
-      // Clear existing customers and insert new ones
-      await client.query('DELETE FROM customers');
-      for (const customer of rows) {
-        await client.query(`
-          INSERT INTO customers (
-            id, name, phone, email, address, total_purchases, total_value,
-            pending_amount, last_purchase, notes
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        `, [
-          customer.id || `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          customer.name,
-          customer.phone || null,
-          customer.email || null,
-          customer.address || null,
-          customer.totalPurchases || 0,
-          customer.totalValue || 0,
-          customer.pendingAmount || 0,
-          customer.lastPurchase || null,
-          customer.notes || null
-        ]);
-      }
+      const { error: delError } = await supabase!.from('customers').delete().not('id', 'is', null);
+      if (delError) throw delError;
+      const payload = (rows || []).map((customer: any) => ({
+        id: customer.id || `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: customer.name,
+        phone: customer.phone || null,
+        email: customer.email || null,
+        address: customer.address || null,
+        total_purchases: customer.totalPurchases || 0,
+        total_value: customer.totalValue || 0,
+        pending_amount: customer.pendingAmount || 0,
+        last_purchase: customer.lastPurchase || null,
+        notes: customer.notes || null,
+      }));
+      const { error: insError } = await supabase!.from('customers').insert(payload);
+      if (insError) throw insError;
     }
-    
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ success: true }),
-    };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
   }
-  
-  return {
-    statusCode: 405,
-    headers,
-    body: JSON.stringify({ error: 'Method not allowed' }),
-  };
+  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 }
 
-async function handleSales(event: any, client: any, headers: any, action: string) {
+async function handleSales(event: any, headers: any, action: string) {
   if (event.httpMethod === 'GET') {
-    // List sales
-    const result = await client.query(`
-      SELECT 
-        s.id,
-        s.date_iso as "dateISO",
-        s.product,
-        s.quantity,
-        s.total_value as "totalValue",
-        s.total_cost as "totalCost",
-        s.profit,
-        s.customer_name as "customerName",
-        s.customer_phone as "customerPhone",
-        s.payment_method as "paymentMethod",
-        s.status,
-        s.sale_type as "saleType"
-      FROM sales s
-      ORDER BY s.date_iso DESC
-    `);
-    
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify(result.rows),
-    };
+    const { data, error } = await supabase!
+      .from('sales')
+      .select('id, date_iso, product, quantity, total_value, total_cost, profit, customer_name, customer_phone, payment_method, status, sale_type')
+      .order('date_iso', { ascending: false });
+    if (error) throw error;
+    const out = (data || []).map((s: any) => ({
+      id: s.id,
+      dateISO: s.date_iso,
+      product: s.product,
+      quantity: Number(s.quantity || 0),
+      totalValue: Number(s.total_value || 0),
+      totalCost: Number(s.total_cost || 0),
+      profit: Number(s.profit || 0),
+      customerName: s.customer_name || null,
+      customerPhone: s.customer_phone || null,
+      paymentMethod: s.payment_method || null,
+      status: s.status,
+      saleType: s.sale_type,
+    }));
+    return { statusCode: 200, headers, body: JSON.stringify(out) };
   } else if (event.httpMethod === 'POST') {
-    // Create sale
     const body = JSON.parse(event.body || '{}');
     const { mode, rows } = body;
-    
     if (mode === 'append' && rows && rows.length > 0) {
       const sale = rows[0];
-      const result = await client.query(`
-        INSERT INTO sales (
-          date_iso, product, quantity, total_value, total_cost, profit,
-          customer_name, customer_phone, payment_method, status, sale_type
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'sale')
-        RETURNING id
-      `, [
-        sale.dateISO || new Date().toISOString(),
-        sale.product,
-        sale.quantity,
-        sale.totalValue,
-        sale.totalCost,
-        sale.profit,
-        sale.customerName || null,
-        sale.customerPhone || null,
-        sale.paymentMethod || null,
-        sale.status || 'paid'
-      ]);
-      
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, id: result.rows[0].id }),
-      };
+      const payload = [{
+        date_iso: sale.dateISO || new Date().toISOString(),
+        product: sale.product,
+        quantity: sale.quantity,
+        total_value: sale.totalValue,
+        total_cost: sale.totalCost,
+        profit: sale.profit,
+        customer_name: sale.customerName || null,
+        customer_phone: sale.customerPhone || null,
+        payment_method: sale.paymentMethod || null,
+        status: sale.status || 'paid',
+        sale_type: 'sale',
+      }];
+      const { data: inserted, error } = await supabase!.from('sales').insert(payload).select('id').limit(1);
+      if (error) throw error;
+      const id = inserted && inserted.length > 0 ? inserted[0].id : null;
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, id }) };
     }
-    
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ success: true }),
-    };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
   }
-  
-  return {
-    statusCode: 405,
-    headers,
-    body: JSON.stringify({ error: 'Method not allowed' }),
-  };
+  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
 }
 
-async function handleDashboard(event: any, client: any, headers: any) {
-  // Get dashboard summary
-  const [productsResult, salesResult, customersResult] = await Promise.all([
-    client.query('SELECT COUNT(*) as count FROM products'),
-    client.query('SELECT COUNT(*) as count, SUM(total_value) as total_value, SUM(profit) as total_profit FROM sales'),
-    client.query('SELECT COUNT(*) as count FROM customers')
-  ]);
-  
-  const products = productsResult.rows[0];
-  const sales = salesResult.rows[0];
-  const customers = customersResult.rows[0];
-  
-  // Get recent sales
-  const recentSalesResult = await client.query(`
-    SELECT 
-      s.id,
-      s.date_iso as "dateISO",
-      s.product,
-      s.quantity,
-      s.total_value as "totalValue",
-      s.total_cost as "totalCost",
-      s.profit,
-      s.customer_name as "customerName",
-      s.customer_phone as "customerPhone",
-      s.payment_method as "paymentMethod",
-      s.status
-    FROM sales s
-    ORDER BY s.date_iso DESC
-    LIMIT 5
-  `);
-  
-  // Get low stock products
-  const lowStockResult = await client.query(`
-    SELECT name, quantity 
-    FROM products 
-    WHERE quantity < 10 
-    ORDER BY quantity ASC
-    LIMIT 5
-  `);
-  
+async function handleDashboard(event: any, headers: any) {
+  const { count: totalProducts, error: prodErr } = await supabase!
+    .from('products')
+    .select('id', { count: 'exact', head: true });
+  if (prodErr) throw prodErr;
+
+  const { data: salesAll, error: salesErr } = await supabase!
+    .from('sales')
+    .select('total_value, profit');
+  if (salesErr) throw salesErr;
+  const totalSalesValue = (salesAll || []).reduce((sum: number, s: any) => sum + Number(s.total_value || 0), 0);
+  const totalProfit = (salesAll || []).reduce((sum: number, s: any) => sum + Number(s.profit || 0), 0);
+
+  const { count: totalCustomers, error: custErr } = await supabase!
+    .from('customers')
+    .select('id', { count: 'exact', head: true });
+  if (custErr) throw custErr;
+
+  const { data: recentSalesRaw, error: recentErr } = await supabase!
+    .from('sales')
+    .select('id, date_iso, product, quantity, total_value, total_cost, profit, customer_name, customer_phone, payment_method, status')
+    .order('date_iso', { ascending: false })
+    .limit(5);
+  if (recentErr) throw recentErr;
+  const recentSales = (recentSalesRaw || []).map((s: any) => ({
+    id: s.id,
+    dateISO: s.date_iso,
+    product: s.product,
+    quantity: Number(s.quantity || 0),
+    totalValue: Number(s.total_value || 0),
+    totalCost: Number(s.total_cost || 0),
+    profit: Number(s.profit || 0),
+    customerName: s.customer_name || null,
+    customerPhone: s.customer_phone || null,
+    paymentMethod: s.payment_method || null,
+    status: s.status,
+  }));
+
+  const { data: lowStockRaw, error: lowErr } = await supabase!
+    .from('products')
+    .select('name, quantity')
+    .lt('quantity', 10)
+    .order('quantity', { ascending: true })
+    .limit(5);
+  if (lowErr) throw lowErr;
+  const topProducts = (lowStockRaw || []).map((p: any) => ({ name: p.name, quantity: Number(p.quantity || 0) }));
+
   const dashboardData = {
-    totalSalesValue: parseFloat(sales.total_value || '0'),
-    totalProfit: parseFloat(sales.total_profit || '0'),
-    totalProducts: parseInt(products.count),
-    totalCustomers: parseInt(customers.count),
-    lowStockProducts: lowStockResult.rows.length,
-    recentSales: recentSalesResult.rows,
-    topProducts: lowStockResult.rows.map(p => ({ name: p.name, quantity: p.quantity }))
+    totalSalesValue,
+    totalProfit,
+    totalProducts: Number(totalProducts || 0),
+    totalCustomers: Number(totalCustomers || 0),
+    lowStockProducts: (lowStockRaw || []).length,
+    recentSales,
+    topProducts,
   };
-  
-  return {
-    statusCode: 200,
-    headers,
-    body: JSON.stringify(dashboardData),
-  };
+
+  return { statusCode: 200, headers, body: JSON.stringify(dashboardData) };
 }

@@ -1,87 +1,60 @@
 import type { Handler } from '@netlify/functions';
-import { Pool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 
-// Database configuration (prefers DATABASE_URL when provided, supports Supabase SSL)
-const connectionString = process.env.DATABASE_URL;
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
-const dbConfig = {
-  host: process.env.DB_HOST || 'iestore-iestore.b.aivencloud.com',
-  port: parseInt(process.env.DB_PORT || '15158'),
-  database: process.env.DB_NAME || 'defaultdb',
-  user: process.env.DB_USER || 'avnadmin',
-  password: process.env.DB_PASSWORD || '',
-  ssl: { rejectUnauthorized: false },
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-};
-
-const pool = connectionString
-  ? new Pool({
-      connectionString,
-      ssl: { rejectUnauthorized: false },
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 300,
-    })
-  : new Pool({
-      ...dbConfig,
-      connectionTimeoutMillis: 10000,
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 300,
-    });
+const supabase = SUPABASE_URL && SUPABASE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
 
 const handler: Handler = async (event) => {
   try {
     console.log('Test function called with:', event);
-    
-    // Test database connection
-    const client = await pool.connect();
-    
-    try {
-      // Test basic query
-      const result = await client.query('SELECT NOW() as current_time, version() as postgres_version');
-      const dbInfo = result.rows[0];
-      
-      // Get table counts
-      const tablesResult = await client.query(`
-        SELECT 
-          'products' as table_name, COUNT(*) as count FROM products
-        UNION ALL
-        SELECT 
-          'customers' as table_name, COUNT(*) as count FROM customers
-        UNION ALL
-        SELECT 
-          'sales' as table_name, COUNT(*) as count FROM sales
-      `);
-      
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        },
-        body: JSON.stringify({
-          message: 'Netlify functions with PostgreSQL are working!',
-          timestamp: new Date().toISOString(),
-          method: event.httpMethod,
-          path: event.path,
-          query: event.queryStringParameters,
-          database: {
-            connected: true,
-            currentTime: dbInfo.current_time,
-            version: dbInfo.postgres_version,
-            tables: tablesResult.rows
-          }
-        }),
-      };
-    } finally {
-      client.release();
+    if (!supabase) {
+      throw new Error('Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY');
     }
+
+    // Test basic queries using Supabase API
+    const tables: any[] = [];
+    const now = new Date().toISOString();
+
+    const countFor = async (table: string) => {
+      const { count, error } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true });
+      if (error) {
+        console.warn(`Count error for ${table}:`, error.message);
+        return { table_name: table, count: 0, error: error.message };
+      }
+      return { table_name: table, count: count || 0 };
+    };
+
+    tables.push(await countFor('products'));
+    tables.push(await countFor('customers'));
+    tables.push(await countFor('sales'));
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      },
+      body: JSON.stringify({
+        message: 'Netlify functions with Supabase API are working!',
+        timestamp: now,
+        method: event.httpMethod,
+        path: event.path,
+        query: event.queryStringParameters,
+        database: {
+          connected: true,
+          currentTime: now,
+          tables
+        }
+      }),
+    };
   } catch (error) {
     console.error('Test function error:', error);
     
