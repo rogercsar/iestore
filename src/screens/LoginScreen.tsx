@@ -23,20 +23,45 @@ export default function LoginScreen({ onLogin }: Props) {
     setLoading(true);
     (async () => {
       try {
+        const payload = { username: username.trim(), password: password.trim() };
+        console.log('[login] Attempt', { username: payload.username });
         const res = await fetch('/.netlify/functions/postgres?table=auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: username.trim(), password: password.trim() })
+          body: JSON.stringify(payload)
         });
+
+        let rawText = '';
+        try {
+          rawText = await res.clone().text();
+        } catch (e: any) {
+          rawText = `(erro ao ler corpo: ${e?.message || String(e)})`;
+        }
+        console.log('[login] Response', { status: res.status, ok: res.ok, body: rawText });
+
         if (!res.ok) {
-          const text = await res.text();
-          Alert.alert('Erro', text || 'Falha no login');
+          let message = rawText || 'Falha no login';
+          try {
+            const parsed = JSON.parse(rawText);
+            message = parsed?.message || parsed?.error || message;
+          } catch {}
+          Alert.alert('Erro', message);
           return;
         }
-        const json = await res.json();
+
+        let json: any;
+        try {
+          json = await res.json();
+        } catch (e: any) {
+          console.log('[login] JSON parse error', { message: e?.message, stack: e?.stack });
+          Alert.alert('Erro', 'Resposta inválida do servidor');
+          return;
+        }
         const token = json?.token || `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log('[login] Success', { tokenPreview: token?.slice(0, 12) + '...' });
         onLogin(token);
       } catch (e: any) {
+        console.log('[login] Network error', { message: e?.message, stack: e?.stack });
         Alert.alert('Erro', e?.message || 'Erro de rede ao tentar entrar');
       } finally {
         setLoading(false);

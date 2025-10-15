@@ -400,6 +400,7 @@ async function handleAuth(event: any, headers: any) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'username and password are required' }) };
   }
 
+  console.log('[auth] Login attempt', { username });
   // Find user by username
   const { data: user, error } = await supabase!
     .from('users')
@@ -410,20 +411,24 @@ async function handleAuth(event: any, headers: any) {
   if (error && error.code !== 'PGRST116') throw error; // treat not found below
 
   if (!user) {
+    console.log('[auth] User not found', { username });
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Usuário ou senha incorretos' }) };
   }
   if (user.status !== 'active') {
+    console.log('[auth] User inactive', { username });
     return { statusCode: 403, headers, body: JSON.stringify({ error: 'Usuário inativo' }) };
   }
 
   // Plain-text password check (consider hashing in production)
   if (String(user.password || '') !== String(password)) {
+    console.log('[auth] Wrong password', { username });
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Usuário ou senha incorretos' }) };
   }
 
   const now = Math.floor(Date.now() / 1000);
   const token = generateToken({ sub: user.id, username: user.username, role: user.role, iat: now, exp: now + 60 * 60 * 24 });
 
+  console.log('[auth] Login success', { userId: user.id, username: user.username, role: user.role });
   return {
     statusCode: 200,
     headers,
