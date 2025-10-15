@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { apiService, type Product, type Customer, type Sale, type DashboardSummary, type Promotion, type Campaign } from '../services/api'
+import { apiService, type Product, type Customer, type Sale, type DashboardSummary, type Promotion, type Campaign, type User } from '../services/api'
 
 export const useAppStore = defineStore('app', () => {
   // State
@@ -9,6 +9,7 @@ export const useAppStore = defineStore('app', () => {
   const sales = ref<Sale[]>([])
   const promotions = ref<Promotion[]>([])
   const campaigns = ref<Campaign[]>([])
+  const users = ref<User[]>([])
   const dashboardSummary = ref<DashboardSummary | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -189,6 +190,31 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  const markInstallmentPaid = async (saleId: string, installmentId: string) => {
+    try {
+      setLoading(true)
+      clearError()
+      await apiService.markInstallmentPaid(saleId, installmentId)
+      // Atualizar estado local
+      const idx = (sales.value || []).findIndex(s => s.id === saleId)
+      if (idx >= 0) {
+        const sale = sales.value[idx]
+        const instIdx = (sale.installments || []).findIndex(i => i.id === installmentId)
+        if (instIdx >= 0) {
+          const updated = { ...sale.installments![instIdx], status: 'paid', paidDate: new Date().toISOString() }
+          const nextInstalls = [...(sale.installments || [])]
+          nextInstalls[instIdx] = updated
+          sales.value[idx] = { ...sale, installments: nextInstalls }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar parcela')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Dashboard
   const fetchDashboardSummary = async () => {
     try {
@@ -197,6 +223,61 @@ export const useAppStore = defineStore('app', () => {
       dashboardSummary.value = await apiService.getDashboardSummary()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar dashboard')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Users
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      clearError()
+      users.value = await apiService.getUsers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar usuários')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateUser = async (id: string, patch: Partial<User> & { password?: string }) => {
+    try {
+      setLoading(true)
+      clearError()
+      await apiService.updateUser(id, patch)
+      await fetchUsers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar usuário')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createUser = async (user: Omit<User, 'id'> & { id?: string }) => {
+    try {
+      setLoading(true)
+      clearError()
+      await apiService.createUser(user)
+      await fetchUsers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao criar usuário')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteUser = async (id: string) => {
+    try {
+      setLoading(true)
+      clearError()
+      await apiService.deleteUser(id)
+      await fetchUsers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao excluir usuário')
+      throw err
     } finally {
       setLoading(false)
     }
@@ -219,6 +300,7 @@ export const useAppStore = defineStore('app', () => {
     sales,
     promotions,
     campaigns,
+    users,
     dashboardSummary,
     loading,
     error,
@@ -242,6 +324,11 @@ export const useAppStore = defineStore('app', () => {
     deleteCustomer,
     fetchSales,
     createSale,
+    fetchUsers,
+    updateUser,
+    createUser,
+    deleteUser,
+    markInstallmentPaid,
     async fetchPromotions() {
       promotions.value = await apiService.getPromotions()
     },

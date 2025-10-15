@@ -535,32 +535,59 @@ async function handleCustomers(event: any, headers: any, action: string) {
 
 async function handleSales(event: any, headers: any, action: string) {
   if (event.httpMethod === 'GET') {
-    const { data, error } = await supabase!
-      .from('sales')
-      .select('id, date_iso, product, quantity, total_value, total_cost, profit, customer_name, customer_phone, payment_method, status, sale_type')
-      .order('date_iso', { ascending: false });
-    if (error) throw error;
-    const out = (data || []).map((s: any) => ({
-      id: s.id,
-      dateISO: s.date_iso,
-      product: s.product,
-      quantity: Number(s.quantity || 0),
-      totalValue: Number(s.total_value || 0),
-      totalCost: Number(s.total_cost || 0),
-      profit: Number(s.profit || 0),
-      customerName: s.customer_name || null,
-      customerPhone: s.customer_phone || null,
-      paymentMethod: s.payment_method || null,
-      status: s.status,
-      saleType: s.sale_type,
-    }));
-    return { statusCode: 200, headers, body: JSON.stringify(out) };
+    try {
+      const { data, error } = await supabase!
+        .from('sales')
+        .select('id, date_iso, product, quantity, total_value, total_cost, profit, customer_name, customer_phone, payment_method, status, sale_type, installments')
+        .order('date_iso', { ascending: false });
+      if (error) throw error;
+      const out = (data || []).map((s: any) => ({
+        id: s.id,
+        dateISO: s.date_iso,
+        product: s.product,
+        quantity: Number(s.quantity || 0),
+        totalValue: Number(s.total_value || 0),
+        totalCost: Number(s.total_cost || 0),
+        profit: Number(s.profit || 0),
+        customerName: s.customer_name || null,
+        customerPhone: s.customer_phone || null,
+        paymentMethod: s.payment_method || null,
+        status: s.status,
+        saleType: s.sale_type,
+        installments: Array.isArray(s.installments) ? s.installments : (() => { try { return JSON.parse(s.installments) } catch { return [] } })()
+      }));
+      return { statusCode: 200, headers, body: JSON.stringify(out) };
+    } catch (err) {
+      // Fallback: coluna installments pode não existir
+      const { data, error } = await supabase!
+        .from('sales')
+        .select('id, date_iso, product, quantity, total_value, total_cost, profit, customer_name, customer_phone, payment_method, status, sale_type')
+        .order('date_iso', { ascending: false });
+      if (error) throw error;
+      const out = (data || []).map((s: any) => ({
+        id: s.id,
+        dateISO: s.date_iso,
+        product: s.product,
+        quantity: Number(s.quantity || 0),
+        totalValue: Number(s.total_value || 0),
+        totalCost: Number(s.total_cost || 0),
+        profit: Number(s.profit || 0),
+        customerName: s.customer_name || null,
+        customerPhone: s.customer_phone || null,
+        paymentMethod: s.payment_method || null,
+        status: s.status,
+        saleType: s.sale_type,
+        installments: []
+      }));
+      return { statusCode: 200, headers, body: JSON.stringify(out) };
+    }
   } else if (event.httpMethod === 'POST') {
     const body = JSON.parse(event.body || '{}');
-    const { mode, rows } = body;
-    if (mode === 'append' && rows && rows.length > 0) {
+    const { mode, rows, action: bodyAction } = body;
+    const action = bodyAction || mode;
+    if (action === 'append' && rows && rows.length > 0) {
       const sale = rows[0];
-      const payload = [{
+      const basePayload = {
         date_iso: sale.dateISO || new Date().toISOString(),
         product: sale.product,
         quantity: sale.quantity,
@@ -571,12 +598,54 @@ async function handleSales(event: any, headers: any, action: string) {
         customer_phone: sale.customerPhone || null,
         payment_method: sale.paymentMethod || null,
         status: sale.status || 'paid',
-        sale_type: 'sale',
-      }];
-      const { data: inserted, error } = await supabase!.from('sales').insert(payload).select('id').limit(1);
-      if (error) throw error;
-      const id = inserted && inserted.length > 0 ? inserted[0].id : null;
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true, id }) };
+        sale_type: sale.saleType || 'sale',
+      } as any;
+      const payloadWithInst = sale.installments ? { ...basePayload, installments: sale.installments } : basePayload;
+      try {
+        const { data: inserted, error } = await supabase!.from('sales').insert([payloadWithInst]).select('id').limit(1);
+        if (error) throw error;
+        const id = inserted && inserted.length > 0 ? inserted[0].id : null;
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, id }) };
+      } catch (e) {
+        // Fallback sem installments se a coluna não existir
+        const { data: inserted, error } = await supabase!.from('sales').insert([basePayload]).select('id').limit(1);
+        if (error) throw error;
+        const id = inserted && inserted.length > 0 ? inserted[0].id : null;
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, id, note: 'installments not persisted: column missing' }) };
+      }
+    } else if (action === 'update_installment' && (body.id || body.saleId)) {
+      const id = body.id || body.saleId;
+      const installmentId: string | undefined = body.installmentId;
+      const installmentNumber: number | undefined = body.installmentNumber;
+      const update = body.update || { status: 'paid', paidDate: new Date().toISOString() };
+      // Buscar venda
+      const { data: saleRow, error: selErr } = await supabase!
+        .from('sales')
+        .select('installments')
+        .eq('id', id)
+        .limit(1)
+        .single();
+      if (selErr) throw selErr;
+      let list: any[] = [];
+      const src = saleRow?.installments;
+      if (Array.isArray(src)) list = src as any[];
+      else if (typeof src === 'string') {
+        try { list = JSON.parse(src) } catch { list = [] }
+      }
+      if (!Array.isArray(list)) list = [];
+      const idx = list.findIndex((i: any) => (installmentId ? i.id === installmentId : false) || (typeof installmentNumber === 'number' ? i.number === installmentNumber : false));
+      if (idx < 0) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Installment not found' }) };
+      }
+      list[idx] = { ...list[idx], ...update };
+      try {
+        const { error: upErr } = await supabase!.from('sales').update({ installments: list }).eq('id', id);
+        if (upErr) throw upErr;
+      } catch (e) {
+        // Fallback quando coluna installments não existe
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'installments column missing; cannot update installment' }) };
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, id, installmentId: installmentId ?? null, installmentNumber: installmentNumber ?? null }) };
     }
     return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
   }

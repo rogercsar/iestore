@@ -46,6 +46,16 @@ export interface Sale {
   paymentMethod?: string
   status?: 'paid' | 'pending' | 'partial'
   createdAt?: string
+  installments?: Installment[]
+}
+
+export interface Installment {
+  id: string
+  number: number
+  value: number
+  dueDate: string
+  status: 'pending' | 'paid' | 'overdue'
+  paidDate?: string
 }
 
 export interface DashboardSummary {
@@ -80,6 +90,18 @@ export interface Campaign {
   audience: string
   channel: 'email' | 'whatsapp'
   publicId?: string
+}
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  username?: string
+  phone?: string
+  photo?: string
+  role: 'admin' | 'user'
+  status: 'active' | 'inactive'
+  createdAt?: string
 }
 
 class ApiService {
@@ -280,7 +302,24 @@ class ApiService {
 
   // Sales
   async getSales(): Promise<Sale[]> {
-    return this.request<Sale[]>('sales')
+    const data = await this.request<any>('sales')
+    if (!Array.isArray(data)) return []
+    return data.map((row: any) => ({
+      id: row.id,
+      dateISO: row.dateISO || row.date_iso,
+      product: row.product,
+      quantity: Number(row.quantity) || 0,
+      totalValue: Number(row.totalValue ?? row.total_value) || 0,
+      totalCost: Number(row.totalCost ?? row.total_cost) || 0,
+      profit: Number(row.profit) || 0,
+      customerName: row.customerName ?? row.customer_name ?? null,
+      customerPhone: row.customerPhone ?? row.customer_phone ?? null,
+      paymentMethod: row.paymentMethod ?? row.payment_method ?? null,
+      status: (row.status as any) ?? 'paid',
+      installments: Array.isArray(row.installments)
+        ? row.installments
+        : (() => { try { return JSON.parse(row.installments) } catch { return [] } })()
+    }))
   }
 
   async createSale(sale: Omit<Sale, 'id'>): Promise<void> {
@@ -291,6 +330,16 @@ class ApiService {
         rows: [sale]
       })
     })
+  }
+
+  async markInstallmentPaid(saleId: string, installmentId: string, paidDate?: string): Promise<void> {
+    const payload = {
+      action: 'update_installment',
+      id: saleId,
+      installmentId,
+      update: { status: 'paid', paidDate: paidDate || new Date().toISOString() }
+    }
+    await this.request('sales', { method: 'POST', body: JSON.stringify(payload) })
   }
 
   // Promotions
@@ -444,6 +493,57 @@ class ApiService {
       recentSales,
       topProducts
     }
+  }
+
+  // Users
+  async getUsers(): Promise<User[]> {
+    const data = await this.request<any>('users')
+    if (!Array.isArray(data)) return []
+    return data.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      username: u.username ?? undefined,
+      phone: u.phone ?? undefined,
+      photo: u.photo ?? undefined,
+      role: (u.role as any) ?? 'user',
+      status: (u.status as any) ?? 'active',
+      createdAt: u.created_at
+    }))
+  }
+
+  async createUser(user: Omit<User, 'id'> & { id?: string }): Promise<void> {
+    await this.request('users', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'append', data: [{
+        id: user.id ?? `user_${Date.now()}`,
+        name: user.name,
+        email: user.email,
+        username: user.username ?? null,
+        password: null,
+        phone: user.phone ?? null,
+        photo: user.photo ?? null,
+        role: user.role ?? 'user',
+        status: user.status ?? 'active'
+      }] })
+    })
+  }
+
+  async updateUser(id: string, patch: Partial<User> & { password?: string }): Promise<void> {
+    const payload: any = { action: 'overwrite', id, data: {} }
+    if (typeof patch.name === 'string') payload.data.name = patch.name
+    if (typeof patch.email === 'string') payload.data.email = patch.email
+    if (typeof patch.username === 'string') payload.data.username = patch.username
+    if (typeof patch.password === 'string') payload.data.password = patch.password
+    if (typeof patch.phone === 'string') payload.data.phone = patch.phone
+    if (typeof patch.photo === 'string') payload.data.photo = patch.photo
+    if (typeof patch.role === 'string') payload.data.role = patch.role
+    if (typeof patch.status === 'string') payload.data.status = patch.status
+    await this.request('users', { method: 'POST', body: JSON.stringify(payload) })
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await this.request('users', { method: 'POST', body: JSON.stringify({ action: 'delete', id }) })
   }
 }
 

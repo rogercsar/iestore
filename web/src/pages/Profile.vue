@@ -77,6 +77,49 @@
             <span v-if="loading" class="loading-spinner"></span>
             {{ loading ? 'Salvando...' : 'Salvar Alterações' }}
           </button>
+
+          <!-- Security / Change Password -->
+          <hr class="section-divider" />
+          <h3 class="section-title">Segurança</h3>
+
+          <div class="form-group">
+            <label class="form-label">Senha Atual *</label>
+            <input
+              v-model="currentPassword"
+              type="password"
+              class="form-input"
+              placeholder="Digite sua senha atual"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nova Senha *</label>
+            <input
+              v-model="newPassword"
+              type="password"
+              class="form-input"
+              placeholder="Digite a nova senha"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Confirmar Nova Senha *</label>
+            <input
+              v-model="confirmPassword"
+              type="password"
+              class="form-input"
+              placeholder="Confirme a nova senha"
+            />
+          </div>
+
+          <button 
+            class="save-button" 
+            @click="handleChangePassword"
+            :disabled="changing"
+          >
+            <span v-if="changing" class="loading-spinner"></span>
+            {{ changing ? 'Alterando...' : 'Alterar Senha' }}
+          </button>
         </div>
       </Card>
     </div>
@@ -87,10 +130,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Card from '../components/Card.vue'
+import { useAppStore } from '../stores/app'
 
 const router = useRouter()
 
 interface UserProfile {
+  id?: string
   name: string
   email: string
   phone: string
@@ -107,19 +152,62 @@ const profile = ref<UserProfile>({
 })
 
 const loading = ref(false)
+const changing = ref(false)
+const currentPassword = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
 
 const goBack = () => {
   router.go(-1)
 }
 
-const loadProfile = () => {
-  // Simular carregamento de dados do usuário
-  profile.value = {
-    name: 'Admin',
-    email: 'admin@iestore.netlify.app',
-    phone: '(11) 99999-9999',
-    company: 'inCRM Store',
-    address: 'São Paulo, SP'
+const store = useAppStore()
+
+function decodeTokenPayload(token: string | null): any | null {
+  if (!token) return null
+  const parts = token.split('.')
+  if (parts.length < 2) return null
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload
+  } catch {
+    return null
+  }
+}
+
+const loadProfile = async () => {
+  try {
+    const token = localStorage.getItem('auth_token')
+    const payload = decodeTokenPayload(token)
+    await store.fetchUsers()
+    const all = store.users || []
+    let current = null as any
+    if (payload && payload.username) {
+      current = all.find(u => u.username === payload.username) || null
+    }
+    if (!current && all.length > 0) current = all[0]
+
+    if (current) {
+      profile.value = {
+        id: current.id,
+        name: current.name,
+        email: current.email,
+        phone: current.phone || '',
+        company: profile.value.company || '',
+        address: profile.value.address || ''
+      }
+    } else {
+      // Fallback para dados simulados
+      profile.value = {
+        name: 'Admin',
+        email: 'admin@iestore.netlify.app',
+        phone: '(11) 99999-9999',
+        company: 'inCRM Store',
+        address: 'São Paulo, SP'
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao carregar perfil', e)
   }
 }
 
@@ -131,8 +219,16 @@ const handleSave = async () => {
 
   loading.value = true
   try {
-    // Simular salvamento
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const id = profile.value.id
+    if (!id) {
+      alert('Usuário não identificado. Faça login novamente.')
+      return
+    }
+    await store.updateUser(id, {
+      name: profile.value.name,
+      email: profile.value.email,
+      phone: profile.value.phone
+    })
     alert('Perfil atualizado com sucesso!')
   } catch (error) {
     alert('Falha ao atualizar perfil')
@@ -144,6 +240,68 @@ const handleSave = async () => {
 onMounted(() => {
   loadProfile()
 })
+
+const handleChangePassword = async () => {
+  if (!profile.value.id) {
+    alert('Usuário não identificado. Faça login novamente.')
+    return
+  }
+  const cp = currentPassword.value.trim()
+  const np = newPassword.value.trim()
+  const cf = confirmPassword.value.trim()
+  if (!cp || !np || !cf) {
+    alert('Preencha todos os campos de senha')
+    return
+  }
+  if (np.length < 6) {
+    alert('A nova senha deve ter pelo menos 6 caracteres')
+    return
+  }
+  if (np !== cf) {
+    alert('A confirmação da senha não confere')
+    return
+  }
+
+  changing.value = true
+  try {
+    // Verificar senha atual usando o endpoint de auth
+    const token = localStorage.getItem('auth_token')
+    const payload = decodeTokenPayload(token)
+    const username = payload?.username
+    if (!username) {
+      alert('Não foi possível validar o usuário logado. Faça login novamente.')
+      return
+    }
+
+    const res = await fetch('/.netlify/functions/postgres?table=auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password: cp })
+    })
+    if (!res.ok) {
+      let message = 'Senha atual incorreta'
+      try {
+        const txt = await res.text()
+        const json = JSON.parse(txt)
+        message = json?.message || json?.error || message
+      } catch {}
+      alert(message)
+      return
+    }
+
+    // Atualizar senha via store/API
+    await store.updateUser(profile.value.id, { password: np })
+    alert('Senha alterada com sucesso!')
+    currentPassword.value = ''
+    newPassword.value = ''
+    confirmPassword.value = ''
+  } catch (e) {
+    console.error('Erro ao alterar senha', e)
+    alert('Falha ao alterar senha')
+  } finally {
+    changing.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -247,6 +405,18 @@ onMounted(() => {
   border-radius: 0.5rem;
   font-size: 1rem;
   transition: all 0.2s ease;
+}
+
+.section-divider {
+  margin: 1.5rem 0;
+  border: none;
+  border-top: 1px solid var(--gray-200);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gray-800);
 }
 
 .form-input:focus {

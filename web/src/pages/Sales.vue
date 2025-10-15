@@ -285,7 +285,7 @@ const completeSale = async (id: string) => {
   // TODO: Implement complete sale functionality
 }
 
-const handleNewSale = async () => {
+  const handleNewSale = async () => {
   try {
     loading.value = true
     console.log('New sale:', newSale.value)
@@ -311,7 +311,7 @@ const handleNewSale = async () => {
     const profit = totalValue - totalCost
     
     // Criar objeto da venda
-    const saleData = {
+    const saleData: any = {
       dateISO: new Date().toISOString(),
       product: selectedProduct.name,
       quantity: quantity,
@@ -323,9 +323,32 @@ const handleNewSale = async () => {
       paymentMethod: newSale.value.paymentMethod,
       status: 'paid'
     }
-    
+
     console.log('Sale data:', saleData)
     
+    // Gerar parcelas se for pagamento parcelado
+    if (newSale.value.paymentMethod === 'installments' && Number(newSale.value.installments) > 1) {
+      const count = Number(newSale.value.installments)
+      const baseValue = Math.round((totalValue / count) * 100) / 100
+      const installments: any[] = []
+      let accumulated = 0
+      const today = new Date()
+      for (let i = 0; i < count; i++) {
+        const value = i === count - 1 ? Number((totalValue - accumulated).toFixed(2)) : baseValue
+        accumulated += value
+        const dueDate = new Date(today.getFullYear(), today.getMonth() + i + 1, today.getDate())
+        installments.push({
+          id: `inst_${Date.now()}_${i + 1}`,
+          number: i + 1,
+          value,
+          dueDate: dueDate.toISOString(),
+          status: 'pending'
+        })
+      }
+      saleData.installments = installments
+      saleData.status = 'pending'
+    }
+
     // Salvar a venda
     await store.createSale(saleData)
     

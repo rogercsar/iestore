@@ -278,25 +278,24 @@ const getStatusText = (installment: Installment) => {
   return `${diffDays} dias`
 }
 
-const markAsPaid = (payment: PendingPayment) => {
+const markAsPaid = async (payment: PendingPayment) => {
   if (confirm(`Confirmar o recebimento da parcela ${payment.installment.number} no valor de ${formatCurrency(payment.installment.value)}?`)) {
-    // In real app, this would update the installment status via API
-    payment.installment.status = 'paid'
-    payment.installment.paidDate = new Date().toISOString()
-    
-    // Remove from pending payments
-    const index = pendingPayments.value.findIndex(p => p.installment.id === payment.installment.id)
-    if (index > -1) {
-      pendingPayments.value.splice(index, 1)
+    try {
+      await store.markInstallmentPaid(payment.saleId, payment.installment.id)
+      // Atualizar UI local rapidamente
+      const index = pendingPayments.value.findIndex(p => p.installment.id === payment.installment.id)
+      if (index > -1) {
+        pendingPayments.value.splice(index, 1)
+      }
+      if (selectedDay.value) {
+        selectedDay.value.payments = selectedDay.value.payments.filter(p => p.installment.id !== payment.installment.id)
+        selectedDay.value.totalAmount = selectedDay.value.payments.reduce((sum, p) => sum + p.installment.value, 0)
+      }
+      alert('Pagamento confirmado e persistido com sucesso!')
+    } catch (e) {
+      console.error('Erro ao persistir recebimento', e)
+      alert('Falha ao persistir recebimento. Tente novamente.')
     }
-    
-    // Update selected day if modal is open
-    if (selectedDay.value) {
-      selectedDay.value.payments = selectedDay.value.payments.filter(p => p.installment.id !== payment.installment.id)
-      selectedDay.value.totalAmount = selectedDay.value.payments.reduce((sum, p) => sum + p.installment.value, 0)
-    }
-    
-    alert('Pagamento confirmado com sucesso!')
   }
 }
 
