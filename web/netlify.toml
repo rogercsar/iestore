@@ -30,5 +30,11 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Note: Functions não estarão disponíveis nesta configuração
-# Para usar Google Sheets API, você precisará configurar as functions separadamente
+[functions]
+  # Usa as funções da raiz do repositório
+  directory = "../netlify/functions"
+
+# Observação: Este site usa o diretório base 'web'. As functions acima
+# apontam para a pasta na raiz. Verifique em Site Settings → Build & deploy →
+# Build settings se o Base directory está como 'web' e confirme que a aba
+# Functions mostra a função 'postgres' após o deploy.

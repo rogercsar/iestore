@@ -70,19 +70,53 @@ const handleLogin = async () => {
   }
 
   loading.value = true
-  
-  // Simula processo de login
-  setTimeout(() => {
-    if (username.value === 'admin' && password.value === 'admin123') {
-      // Gera um token simples
-      const token = `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      localStorage.setItem('auth_token', token)
-      router.push('/dashboard')
-    } else {
-      alert('Usuário ou senha incorretos')
+  try {
+    const payload = { username: username.value.trim(), password: password.value.trim() }
+    console.log('[login:web] Attempt', { username: payload.username })
+
+    const res = await fetch('/.netlify/functions/postgres?table=auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    let rawText = ''
+    try {
+      rawText = await res.clone().text()
+    } catch (e: any) {
+      rawText = `(erro ao ler corpo: ${e?.message || String(e)})`
     }
+    console.log('[login:web] Response', { status: res.status, ok: res.ok, body: rawText })
+
+    if (!res.ok) {
+      let message = rawText || 'Falha no login'
+      try {
+        const parsed = JSON.parse(rawText)
+        message = parsed?.message || parsed?.error || message
+      } catch {}
+      alert(message)
+      return
+    }
+
+    let json: any
+    try {
+      json = await res.json()
+    } catch (e: any) {
+      console.log('[login:web] JSON parse error', { message: e?.message, stack: e?.stack })
+      alert('Resposta inválida do servidor')
+      return
+    }
+
+    const token = json?.token || `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    console.log('[login:web] Success', { tokenPreview: token?.slice(0, 12) + '...' })
+    localStorage.setItem('auth_token', token)
+    router.push('/dashboard')
+  } catch (e: any) {
+    console.log('[login:web] Network error', { message: e?.message, stack: e?.stack })
+    alert(e?.message || 'Erro de rede ao tentar entrar')
+  } finally {
     loading.value = false
-  }, 1000)
+  }
 }
 </script>
 
