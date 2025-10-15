@@ -22,9 +22,16 @@ const pool = connectionString
       ssl: { rejectUnauthorized: false },
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 10000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 300,
     })
-  : new Pool(dbConfig);
+  : new Pool({
+      ...dbConfig,
+      connectionTimeoutMillis: 10000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 300,
+    });
 
 const handler: Handler = async (event) => {
   try {

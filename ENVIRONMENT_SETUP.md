@@ -71,6 +71,10 @@ node scripts/test-netlify-functions.js
 | `DB_PASSWORD` | `YOUR_PASSWORD` |
 | `DB_SSL` | `true` |
 
+> Dica Supabase (serverless): use a Connection string (Pooler) — porta `6543`.
+> Ex.: `postgres://postgres:YOUR_PASSWORD@db.<project-ref>.supabase.co:6543/postgres?sslmode=require`
+> Configure apenas `DATABASE_URL` se preferir; os campos `DB_*` são fallback.
+
 ### 2. **Verificar Deploy**
 
 Após configurar as variáveis:

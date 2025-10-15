@@ -9,7 +9,14 @@ Pegue as credenciais em: Supabase → Project Settings → Database → Connecti
 Adicione no `.env` (ou no painel da Netlify, em Site settings → Environment variables):
 
 ```
+# Conexão direta (porta 5432) — funciona, mas pode ter timeouts em serverless
 DATABASE_URL=postgres://postgres:YOUR_PASSWORD@YOUR_PROJECT_HOST:5432/postgres?sslmode=require
+
+# Conexão via Pooler (recomendado para funções serverless como Netlify) — porta 6543
+# Copie a Connection string (Pooler) no Supabase
+# Exemplo:
+# DATABASE_URL=postgres://postgres:YOUR_PASSWORD@YOUR_PROJECT_HOST:6543/postgres?sslmode=require
+
 DB_HOST=YOUR_PROJECT_HOST
 DB_PORT=5432
 DB_NAME=postgres
@@ -20,6 +27,7 @@ DB_SSL=true
 
 - `YOUR_PROJECT_HOST` costuma ter o formato `db.<hash>.supabase.co`.
 - `DB_SSL=true` é obrigatório para Supabase.
+ - Para funções serverless (Netlify), preferir a Connection string (Pooler) do Supabase (porta 6543).
 
 ## 2) Atualizar exemplo de ambiente
 
@@ -59,6 +67,7 @@ export const pool = new Pool(dbConfig)
 Observações:
 - No Supabase, o certificado SSL é gerenciado pelo serviço. `rejectUnauthorized: false` é suficiente.
 - Se preferir, use `DATABASE_URL` diretamente com `pg`.
+ - Em ambientes serverless, usar o Pooler ajuda a evitar timeouts e excesso de conexões.
 
 ## 5) Segurança recomendada
 
